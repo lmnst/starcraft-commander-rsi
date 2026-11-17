@@ -1,5 +1,6 @@
 #pragma once
 #include <BWAPI.h>
+#include "PlayerColors.h"
 #include <fstream>
 #include <string>
 
@@ -28,7 +29,7 @@ inline void save(BWAPI::Game* game) {
              type != BWAPI::PlayerTypes::PlayerLeft && type != BWAPI::PlayerTypes::ComputerLeft)) continue;
         if (!first) out << ',';
         first = false;
-        auto color = player->getColor();
+        auto color = PlayerColors::actualColor(player);
         out << "{\"id\":" << player->getID() << ",\"name\":" << quoted(player->getName())
             << ",\"race\":" << quoted(player->getRace().getName())
             << ",\"color_id\":" << color.getID()

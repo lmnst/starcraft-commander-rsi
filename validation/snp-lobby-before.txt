@@ -1,0 +1,3 @@
+snp-lock-check.cpp
+PASSED: actual SNP send/receive callbacks complete under forced contention
+FAILED: actual SNP lobby refresh/receive lock inversion deadlocked

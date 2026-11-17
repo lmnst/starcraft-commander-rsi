@@ -26,7 +26,8 @@ def load_labels(replay):
         if not recorded:
             continue
         data = {key: recorded[key] for key in ("map", "opponent", "control", "started_at",
-                "self_player_id", "players", "map_actual", "our_player_name") if key in recorded}
+                "self_player_id", "players", "map_actual", "our_player_name", "self_replay_camera", "player_color_policy",
+                "render_profile", "render_size") if key in recorded}
         data["map"] = map_label(data.get("map", ""))
         if data.get("opponent", "").startswith("Original Computer"):
             data["opponent"] = BUILTIN
@@ -74,6 +75,14 @@ def save_match_labels(run, status, replay=None):
     if ours:
         status["our_player_name"] = ours["name"]
     if replay:
+        import shutil
+        from replay_perspective import camera_path, read_camera
+        original_camera = run / "bwapi-data/write/camera-track.jsonl"
+        track = read_camera(original_camera)
+        status["camera_recorded"] = bool(track and track.player_id == status.get("self_player_id"))
+        if status["camera_recorded"]:
+            shutil.copy2(original_camera, camera_path(replay))
         store(replay.with_suffix(".rep.json"), {key: status[key] for key in (
             "map", "opponent", "control", "started_at", "self_player_id", "players",
-            "map_actual", "our_player_name") if key in status})
+            "map_actual", "our_player_name", "camera_recorded", "self_replay_camera", "player_color_policy",
+            "render_profile", "render_size") if key in status})

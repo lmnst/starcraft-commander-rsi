@@ -10,11 +10,252 @@
   "opponent_hosts": [
     "McRave|Benzene"
   ],
+  "pairs": [
+    {
+      "map": "Benzene",
+      "opponent": "BananaBrain",
+      "passed": true,
+      "attempts": 1,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195041-926499",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195041-926499"
+    },
+    {
+      "map": "Destination",
+      "opponent": "BananaBrain",
+      "passed": true,
+      "attempts": 1,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195143-022096",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195143-022096"
+    },
+    {
+      "map": "Heartbreak Ridge",
+      "opponent": "BananaBrain",
+      "passed": true,
+      "attempts": 2,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-200151-793654\\20261110-200519-826973",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-200151-793654\\20261110-200519-826973"
+    },
+    {
+      "map": "Benzene",
+      "opponent": "HladHammer",
+      "passed": true,
+      "attempts": 2,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-200151-793654\\20261110-200849-641187",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-200151-793654\\20261110-200849-641187"
+    },
+    {
+      "map": "Destination",
+      "opponent": "HladHammer",
+      "passed": true,
+      "attempts": 1,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195948-369454",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195948-369454"
+    },
+    {
+      "map": "Heartbreak Ridge",
+      "opponent": "HladHammer",
+      "passed": true,
+      "attempts": 1,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195906-782927",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195906-782927"
+    },
+    {
+      "map": "Benzene",
+      "opponent": "Locutus",
+      "passed": true,
+      "attempts": 1,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195213-982143",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195213-982143"
+    },
+    {
+      "map": "Destination",
+      "opponent": "Locutus",
+      "passed": true,
+      "attempts": 1,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195329-356226",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195329-356226"
+    },
+    {
+      "map": "Heartbreak Ridge",
+      "opponent": "Locutus",
+      "passed": true,
+      "attempts": 1,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195256-276221",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195256-276221"
+    },
+    {
+      "map": "Benzene",
+      "opponent": "McRave",
+      "passed": true,
+      "attempts": 4,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-201401-670567\\20261110-201545-510262",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-201401-670567\\20261110-201545-510262"
+    },
+    {
+      "map": "Destination",
+      "opponent": "McRave",
+      "passed": true,
+      "attempts": 2,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-200151-793654\\20261110-200759-925327",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-200151-793654\\20261110-200759-925327"
+    },
+    {
+      "map": "Heartbreak Ridge",
+      "opponent": "McRave",
+      "passed": true,
+      "attempts": 1,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195729-831416",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195729-831416"
+    },
+    {
+      "map": "Benzene",
+      "opponent": "PurpleWave",
+      "passed": true,
+      "attempts": 1,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-194838-348708",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-194838-348708"
+    },
+    {
+      "map": "Destination",
+      "opponent": "PurpleWave",
+      "passed": true,
+      "attempts": 1,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195002-231948",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195002-231948"
+    },
+    {
+      "map": "Heartbreak Ridge",
+      "opponent": "PurpleWave",
+      "passed": false,
+      "attempts": 4,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-201401-670567\\20261110-201510-387380",
+      "passed_run": null
+    },
+    {
+      "map": "Benzene",
+      "opponent": "PylonPuller",
+      "passed": true,
+      "attempts": 2,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-200151-793654\\20261110-200919-263984",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-200151-793654\\20261110-200919-263984"
+    },
+    {
+      "map": "Destination",
+      "opponent": "PylonPuller",
+      "passed": true,
+      "attempts": 1,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-200118-351251",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-200118-351251"
+    },
+    {
+      "map": "Heartbreak Ridge",
+      "opponent": "PylonPuller",
+      "passed": true,
+      "attempts": 2,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-200151-793654\\20261110-200949-507293",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-200151-793654\\20261110-200949-507293"
+    },
+    {
+      "map": "Benzene",
+      "opponent": "Skynet",
+      "passed": true,
+      "attempts": 1,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-200151-793654\\20261110-200151-793654",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-200151-793654\\20261110-200151-793654"
+    },
+    {
+      "map": "Destination",
+      "opponent": "Skynet",
+      "passed": false,
+      "attempts": 3,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-201401-670567\\20261110-201401-670567",
+      "passed_run": null
+    },
+    {
+      "map": "Heartbreak Ridge",
+      "opponent": "Skynet",
+      "passed": true,
+      "attempts": 1,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-200151-793654\\20261110-200227-617026",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-200151-793654\\20261110-200227-617026"
+    },
+    {
+      "map": "Benzene",
+      "opponent": "Stardust-SourceRepairCandidate",
+      "passed": true,
+      "attempts": 1,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-194645-145078",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-194645-145078"
+    },
+    {
+      "map": "Destination",
+      "opponent": "Stardust-SourceRepairCandidate",
+      "passed": true,
+      "attempts": 1,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-194805-701955",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-194805-701955"
+    },
+    {
+      "map": "Heartbreak Ridge",
+      "opponent": "Stardust-SourceRepairCandidate",
+      "passed": true,
+      "attempts": 1,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-194732-437292",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-194732-437292"
+    },
+    {
+      "map": "Benzene",
+      "opponent": "Steamhammer",
+      "passed": true,
+      "attempts": 2,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-200151-793654\\20261110-200618-715527",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-200151-793654\\20261110-200618-715527"
+    },
+    {
+      "map": "Destination",
+      "opponent": "Steamhammer",
+      "passed": true,
+      "attempts": 1,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195628-798960",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195628-798960"
+    },
+    {
+      "map": "Heartbreak Ridge",
+      "opponent": "Steamhammer",
+      "passed": true,
+      "attempts": 1,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195558-173406",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195558-173406"
+    },
+    {
+      "map": "Benzene",
+      "opponent": "tscmoo-AuthorCandidate",
+      "passed": true,
+      "attempts": 2,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-200151-793654\\20261110-200549-912086",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-200151-793654\\20261110-200549-912086"
+    },
+    {
+      "map": "Destination",
+      "opponent": "tscmoo-AuthorCandidate",
+      "passed": true,
+      "attempts": 1,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195459-497843",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195459-497843"
+    },
+    {
+      "map": "Heartbreak Ridge",
+      "opponent": "tscmoo-AuthorCandidate",
+      "passed": true,
+      "attempts": 1,
+      "latest": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195431-105791",
+      "passed_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\20261110-195431-105791"
+    }
+  ],
   "test_summaries": [
     "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-194645-145078\\summary.json",
     "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-200151-793654\\summary.json",
     "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-201019-835150\\summary.json",
     "E:\\StarCraft_llmteam\\commander_desktop\\validation\\matrix\\20261110-201401-670567\\summary.json"
-  ],
-  "note": "Historical local short-test summary, not a guarantee for other environments."
+  ]
 }

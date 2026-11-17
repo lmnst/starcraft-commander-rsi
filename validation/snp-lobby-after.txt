@@ -1,0 +1,5 @@
+snp-lock-check.cpp
+PASSED: actual SNP send/receive callbacks complete under forced contention
+PASSED: actual SNP lobby refresh/receive callbacks complete under forced contention
+PASSED: 10000 concurrent packets delivered in exact FIFO order, no deadlock or loss
+PASSED: stable advertisement snapshot held across concurrent packet delivery

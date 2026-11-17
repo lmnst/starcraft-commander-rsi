@@ -12,15 +12,20 @@ import subprocess
 import time
 import uuid
 
-ROOT = Path(__file__).resolve().parents[1]
+from portable_runtime import ROOT, discover_game, settings
+
 LAB = Path(os.environ.get("STARCRAFT_LAB", "E:/StarCraftAI"))
-GAME = LAB / "StarCraft1161"
-DISPLAY = Path(os.environ.get("STARCRAFT_DISPLAY", str(ROOT.parent / "human_commander_local/vendor/cnc-ddraw-v7.1")))
+GAME = discover_game() or LAB / "StarCraft1161"
+DISPLAY = Path(os.environ.get("STARCRAFT_DISPLAY", str(ROOT / "runtime/cnc-ddraw" if (ROOT / "runtime/cnc-ddraw").exists() else ROOT.parent / "human_commander_local/vendor/cnc-ddraw-v7.1")))
+MAP_ROOT = ROOT / "runtime/maps" if (ROOT / "runtime/maps").is_dir() else LAB / "benchmark/maps"
+ENGINE = ROOT / "runtime/engine"
 RUNS = ROOT / "matches"
 VALIDATION = ROOT / "validation"
 BASELINE = "v6-fix-r1-20261110"
 SOURCE_HASH = "8ef8ae16cf2f0bbc474b8b2b4cbc23ad7239a3ab1a6551c58a397e4a438fca00"
 BASELINE_HASH = "4528078cda6d98d202559aea4d9fbf6e401c64c15fb2703b6a8de38f1a54e468"
+VIEWPORTS = {"standard": (640, 480), "expanded": (800, 600)}
+EXPANDER_HASH = "05b50dd3e0257219362a8060a51deb916659a25d316119bea20a2b040e232bd7"
 MAPS = {
     "Benzene": ("(2)Benzene.scx", "45764b9baa72f83a5eb2eab49ddea46c6af21da75bc42e687e6dab93e4e4044e"),
     "Heartbreak Ridge": ("(2)Heartbreak Ridge.scx", "64527ae691307756dbc2700c68ab5878476eed27c3dfc9a64411955f4107f50b"),
@@ -29,9 +34,9 @@ MAPS = {
 OPPONENTS = {bot["name"]: bot for bot in json.loads(
     (ROOT / "opponents/recorded-roster.json").read_text(encoding="utf-8"))}
 BUILTIN = "原版电脑（练习）"
-_settings_path = LAB / "local.settings.json"
-_settings = json.loads(_settings_path.read_text(encoding="utf-8-sig")) if _settings_path.is_file() else {}
-JAVA = os.environ.get("STARCRAFT_JAVA") or (LAB / _settings["java"] if "java" in _settings else "java")
+_legacy_settings = LAB / "local.settings.json"
+_legacy = json.loads(_legacy_settings.read_text(encoding="utf-8-sig")) if _legacy_settings.is_file() else {}
+JAVA = os.environ.get("STARCRAFT_JAVA") or (ROOT / "runtime/jre/bin/java.exe" if (ROOT / "runtime/jre/bin/java.exe").is_file() else LAB / _legacy["java"] if "java" in _legacy else "java")
 CREATE_NO_WINDOW = subprocess.CREATE_NO_WINDOW
 
 def digest(path):
@@ -61,7 +66,7 @@ def validate():
     verify(ROOT / "baseline/Bot.cpp", SOURCE_HASH)
     verify(ROOT / "baseline/Baseline.dll", BASELINE_HASH)
     for file_name, expected in MAPS.values():
-        verify(LAB / "benchmark/maps" / file_name, expected)
+        verify(MAP_ROOT / file_name, expected)
     for name, bot in OPPONENTS.items():
         folder = ROOT / "opponents" / name / "bwapi-data/AI"
         verify(folder / entry_name(bot), bot["binary_sha256"])
@@ -69,8 +74,11 @@ def validate():
             verify(folder / "PurpleWave.jar", bot["payload_sha256"])
 
 def prepare(slot, map_name, room, speed, control, opponent=None, fullscreen=True, replay=None,
-            opponent_hosts=False):
+            opponent_hosts=False, replay_size=None, render_profile="standard"):
     host = opponent is None
+    if render_profile not in VIEWPORTS:
+        raise ValueError("未知视野设置。")
+    expanded = host and render_profile == "expanded"
     creates_lobby = host != opponent_hosts
     for directory in ("bwapi-data/AI", "bwapi-data/read", "bwapi-data/write", "bwapi-data/data",
                       "bwapi-data/BWTA", "bwapi-data/BWTA2", "maps/replays", "characters", "tmp"):
@@ -86,17 +94,24 @@ def prepare(slot, map_name, room, speed, control, opponent=None, fullscreen=True
                     shutil.copy2(path, target)
             else:
                 shutil.copy2(path, target)
-    for file in (GAME / "characters").iterdir():
+    if room:
+        shutil.copy2(ROOT / "build/CommanderLocalPC.snp", slot / "SNP_DirectIP.snp")
+    injector = ENGINE / "injectory.x86.exe"
+    if injector.is_file():
+        shutil.copy2(injector, slot / "injectory.x86.exe")
+    for library in (ENGINE / "crt").glob("*.dll"):
+        shutil.copy2(library, slot / library.name)
+    for file in (GAME / "characters").glob("*"):
         if file.suffix.lower() in (".mpc", ".spc"):
             shutil.copy2(file, slot / "characters" / file.name)
     if replay:
         map_file, source_map = "input.rep", replay
     else:
         map_file, map_hash = MAPS[map_name]
-        source_map = LAB / "benchmark/maps" / map_file
+        source_map = MAP_ROOT / map_file
         verify(source_map, map_hash)
     shutil.copy2(source_map, slot / "maps" / map_file)
-    bwapi = GAME / "bwapi-data/BWAPI.dll"
+    bwapi = ENGINE / "BWAPI.dll" if (ENGINE / "BWAPI.dll").is_file() else GAME / "bwapi-data/BWAPI.dll"
     java = False
     if replay:
         module = "bwapi-data/AI/ReplayControl.dll"
@@ -116,7 +131,7 @@ def prepare(slot, map_name, room, speed, control, opponent=None, fullscreen=True
             verify(package / "AI/PurpleWave.jar", opponent["payload_sha256"])
         shutil.copytree(package, slot / "bwapi-data", dirs_exist_ok=True)
         if opponent["backend"] == "legacy":
-            bwapi = LAB / "opponents/C/Skynet/BWAPI.dll"
+            bwapi = ENGINE / "BWAPI-3.7.4.dll" if (ENGINE / "BWAPI-3.7.4.dll").is_file() else LAB / "opponents/C/Skynet/BWAPI.dll"
             verify(bwapi, "ef9de2f6557a3ccb108aa206df054a59b4b834f5a85e501bbb0edb9b7c9a5438")
             (slot / "storm.dll").rename(slot / "StormBase.dll")
             shutil.copy2(ROOT / "build/LegacyStorm.dll", slot / "storm.dll")
@@ -127,6 +142,16 @@ def prepare(slot, map_name, room, speed, control, opponent=None, fullscreen=True
             shutil.copy2(ROOT / "build/CommanderLayer.dll", slot / "bwapi-data/AI")
             module = "bwapi-data/AI/CommanderLayer.dll"
     shutil.copy2(bwapi, slot / "bwapi-data/BWAPI.dll")
+    if expanded:
+        source = ROOT / "vendor/resolution-expander/ResolutionExpander.dll"
+        verify(source, EXPANDER_HASH)
+        shutil.copy2(source, slot / "bwapi-data/ResolutionExpander.dll")
+        shutil.copy2(ROOT / "build/WideView.dll", slot / "bwapi-data/WideView.dll")
+        width, height = VIEWPORTS[render_profile]
+        # The legacy DLL reads its INI beside itself. Keep every legacy +/-
+        # slot at the selected size so incidental keys cannot change the view.
+        (slot / "bwapi-data/ResSettings.ini").write_text("[Settings]\n" + "".join(
+            f"ScreenWidth{i}={width}\nScreenHight{i}={height}\n" for i in range(9)), encoding="ascii")
     shutil.copy2(DISPLAY / "ddraw.dll", slot / "ddraw.dll")
     if host:
         shader = "Shaders/xbr-lv2-noblend.glsl"
@@ -137,12 +162,12 @@ def prepare(slot, map_name, room, speed, control, opponent=None, fullscreen=True
     (slot / "ddraw.ini").write_text(
         "[ddraw]\nwindowed=true\n"
         f"fullscreen={'true' if host and fullscreen else 'false'}\n"
-        f"width={0 if host and fullscreen else 960 if host else 640}\n"
-        f"height={0 if host and fullscreen else 720 if host else 480}\n"
+        f"width={replay_size[0] if replay and replay_size else 0 if host and fullscreen else 960 if host else 640}\n"
+        f"height={replay_size[1] if replay and replay_size else 0 if host and fullscreen else 720 if host else 480}\n"
         f"renderer={'opengl' if host else 'direct3d9'}\nshader={shader}\n"
-        "maintas=true\nboxing=true\nborder=false\nsavesettings=0\n"
-        f"singlecpu={'false' if opponent_hosts else 'true'}\n"
-        + ("devmode=true\n" if replay else "")
+        f"maintas=true\nboxing={'false' if expanded else 'true'}\nborder=false\nsavesettings=0\n"
+        f"singlecpu={'false' if room or opponent_hosts else 'true'}\n"
+        + ("devmode=true\nposX=0\nposY=-32000\ncenter_window=0\n" if replay else "")
         + "[StarCraft]\ngame_handles_close=true\n", encoding="ascii")
     configuration = (
         f"[ai]\nai={module}\nai_dbg={module}\n"
@@ -162,7 +187,13 @@ def prepare(slot, map_name, room, speed, control, opponent=None, fullscreen=True
     (slot / "bwapi-data/bwapi.ini").write_text(configuration, encoding="ascii")
     env = {k: v for k, v in os.environ.items() if not k.startswith(("BWAPI_CONFIG_", "OPENBW_", "COMMANDER_"))}
     env.update(BWAPI_CONFIG_INI=str(slot / "bwapi-data/bwapi.ini"),
-               TEMP=str(slot / "tmp"), TMP=str(slot / "tmp"), COMMANDER_CONTROL=control)
+               TEMP=str(slot / "tmp"), TMP=str(slot / "tmp"), COMMANDER_CONTROL=control,
+               COMMANDER_RENDER_PROFILE=render_profile if host else "standard",
+               COMMANDER_NETWORK_SCOPE=room)
+    if host and not replay:
+        env['COMMANDER_COLOR_POLICY']='self_blue_enemy_red_v1'
+    if room:
+        env['COMMANDER_DIAGNOSTICS']='1'
     if not host:
         env.update(COMMANDER_ROLE="opponent", COMMANDER_DELEGATE="bwapi-data/AI/" + entry_name(opponent))
     return env
@@ -181,8 +212,11 @@ class GameProcesses:
         return process
 
     def launch(self, directory, env):
+        libraries = ["bwapi-data\\BWAPI.dll"]
+        if env.get("COMMANDER_RENDER_PROFILE") == "expanded":
+            libraries.insert(0, "bwapi-data\\WideView.dll")
         return self.start([str(directory / "injectory.x86.exe"), "--verbose", "--print-pid", "--launch",
-                           "StarCraft.exe", "--inject", "bwapi-data\\BWAPI.dll", "--wait-for-exit"],
+                           "StarCraft.exe", "--inject", *libraries, "--wait-for-exit"],
                           directory, env, "launcher.log")
 
     def close(self):
@@ -235,7 +269,8 @@ def game_lock():
         ctypes.windll.kernel32.CloseHandle(wintypes.HANDLE(handle))
 
 def playing(run, map_name, opponent_name, control="human", speed=42, fullscreen=True,
-            update=lambda value: None, smoke_frames=0, opponent_hosts=None, keep_results=None):
+            update=lambda value: None, smoke_frames=0, opponent_hosts=None, keep_results=None,
+            render_profile="expanded"):
     if keep_results is None:
         keep_results = not smoke_frames
     if opponent_hosts is None:
@@ -243,16 +278,18 @@ def playing(run, map_name, opponent_name, control="human", speed=42, fullscreen=
         opponent_hosts = f"{opponent_name}|{map_name}" in report.get("opponent_hosts", [])
     with game_lock():
         return run_match(run, map_name, opponent_name, control, speed, fullscreen, update,
-                         smoke_frames, opponent_hosts, keep_results)
+                         smoke_frames, opponent_hosts, keep_results, render_profile)
 
 def run_match(run, map_name, opponent_name, control, speed, fullscreen, update, smoke_frames,
-              opponent_hosts, keep_results):
+              opponent_hosts, keep_results, render_profile):
     from replay_info import save_match_labels
     games = GameProcesses()
     peers = GameProcesses()
     status = dict(map=map_name, opponent=opponent_name, baseline=BASELINE, baseline_sha256=BASELINE_HASH,
                   source_sha256=SOURCE_HASH, control=control, started_at=datetime.now().astimezone().isoformat(),
-                  state="starting", opponent_hosts=opponent_hosts)
+                  state="starting", opponent_hosts=opponent_hosts, self_replay_camera="free",
+                  player_color_policy="self_blue_enemy_red_v1", render_profile=render_profile,
+                  render_size=list(VIEWPORTS[render_profile]))
 
     def save_record():
         replay = newest_replay(run)
@@ -267,7 +304,7 @@ def run_match(run, map_name, opponent_name, control, speed, fullscreen, update, 
         opponent = None if opponent_name == BUILTIN else OPPONENTS[opponent_name]
         room = "SC" + uuid.uuid4().hex[:10] if opponent else ""
         host_env = prepare(run, map_name, room, speed, control, fullscreen=fullscreen,
-                           opponent_hosts=opponent_hosts)
+                           opponent_hosts=opponent_hosts, render_profile=render_profile)
         host_env["COMMANDER_RESULTS_WATCH"] = "1" if keep_results else "0"
         if smoke_frames:
             host_env["COMMANDER_SMOKE_FRAMES"] = str(smoke_frames)
@@ -277,6 +314,14 @@ def run_match(run, map_name, opponent_name, control, speed, fullscreen, update, 
                                 opponent_hosts=opponent_hosts)
             status["opponent_sha256"] = opponent["binary_sha256"]
         status["layer_sha256"] = digest(run / "bwapi-data/AI/CommanderLayer.dll")
+        if opponent:
+            status["transport_sha256"] = digest(run / "SNP_DirectIP.snp")
+            status["transport_policy"] = "snapshot_lobby_packet_lock_v3"
+            status["diagnostic_policy"] = "delegate_transport_logs_v1"
+            status["lan_cpu_policy"] = "independent_scheduler_v1"
+        if render_profile == "expanded":
+            status["display_adapter_sha256"] = digest(run / "bwapi-data/WideView.dll")
+            status["display_expander_sha256"] = EXPANDER_HASH
         status["map_sha256"] = MAPS[map_name][1]
         store(run / "match.json", status)
         if opponent:
@@ -348,6 +393,10 @@ def run_match(run, map_name, opponent_name, control, speed, fullscreen, update, 
                 status["results_open"] = False
                 status["window_closed_at"] = datetime.now().astimezone().isoformat()
         else:
+            native_errors = [path for path in (run / "Errors").glob("*.txt") if path.stat().st_size]
+            if native_errors:
+                status["native_error_files"] = [path.relative_to(run).as_posix() for path in native_errors]
+                raise RuntimeError(f"游戏异常退出，未正常结束对局。崩溃日志已保留在：{run / 'Errors'}")
             status["state"] = "closed"
     except Exception as error:
         status.update(state="error", error=str(error))
@@ -378,6 +427,7 @@ if __name__ == "__main__":
     parser.add_argument("--opponent", choices=(*OPPONENTS, BUILTIN), default="PylonPuller")
     parser.add_argument("--speed", type=int, default=42)
     parser.add_argument("--windowed", action="store_true")
+    parser.add_argument("--standard-view", action="store_true")
     parser.add_argument("--no-record", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--smoke-frames", type=int, default=0)
     args = parser.parse_args()
@@ -389,5 +439,6 @@ if __name__ == "__main__":
         print(run, flush=True)
         result = playing(run, args.map, args.opponent, speed=args.speed,
                          fullscreen=not args.windowed,
+                         render_profile="standard" if args.standard_view else "expanded",
                          update=lambda value: print(value, flush=True), smoke_frames=args.smoke_frames)
         print(json.dumps(result, ensure_ascii=False), flush=True)

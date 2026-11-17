@@ -1,0 +1,215 @@
+{
+  "passed": true,
+  "keymap": "tenkeys_combat_v12",
+  "checks": {
+    "route5": {
+      "combat_before_own_range_and_before_enemy_fires": true,
+      "objective_preserved_and_destroyed": true,
+      "safely_withdrew": true,
+      "repeat_keeps_task": true,
+      "completion_frame": 128
+    },
+    "route6": {
+      "combat_before_own_range_and_before_enemy_fires": true,
+      "objective_preserved_and_destroyed": true,
+      "safely_withdrew": true,
+      "repeat_keeps_task": true,
+      "completion_frame": 1637
+    },
+    "reinforcements": {
+      "joined_main_group": 2,
+      "events": [
+        {
+          "event": "assault_reinforcement",
+          "frame": 224,
+          "task_id": 1,
+          "unit_id": 192,
+          "stage": "joining"
+        },
+        {
+          "event": "assault_reinforcement",
+          "frame": 224,
+          "task_id": 1,
+          "unit_id": 191,
+          "stage": "joining"
+        },
+        {
+          "event": "assault_reinforcement",
+          "frame": 259,
+          "task_id": 1,
+          "unit_id": 191,
+          "stage": "joined"
+        },
+        {
+          "event": "assault_reinforcement",
+          "frame": 260,
+          "task_id": 1,
+          "unit_id": 192,
+          "stage": "joined"
+        }
+      ]
+    },
+    "7_worker_bait": {
+      "army": 24,
+      "max_sampled_displacement_pixels": 0.0,
+      "worker_undamaged": true,
+      "worker_actually_attacked": true
+    },
+    "7_two_waves": {
+      "first_contact_frame": 224,
+      "second_contact_frame": 560,
+      "same_persistent_task": true,
+      "no_key_needed_for_second_wave": true
+    },
+    "7_fog": {
+      "search_frame": 33,
+      "search_expired_frame": 129,
+      "reacquired_frame": 160,
+      "no_attack_orders_through_fog": true,
+      "fixed_guard_origin": true
+    },
+    "defend": {
+      "ignored_worker_bait": true,
+      "normal_allocation_or_shared_rally_reached": true
+    },
+    "rally": {
+      "ignored_worker_bait": true,
+      "normal_allocation_or_shared_rally_reached": true
+    },
+    "1_2_0": {
+      "evade_moved": true,
+      "mining_blocked_interference": true,
+      "reset_released_lock": true
+    },
+    "3_4_8_9_0": {
+      "six_of_24_squad": true,
+      "scope_preserved_task": true,
+      "rally_defend_reset": true
+    },
+    "hud": {
+      "font_size_position_and_four_lines_preserved": true,
+      "new_labels_seen_in_native_logs": true
+    },
+    "lobby_lock": {
+      "old_binary_deadlock_reproduced": true,
+      "new_binary_contention_and_10000_packet_FIFO_passed": true,
+      "snapshot_independent_of_live_ads_and_packets": true,
+      "transport_sha256": "1f305c4c1d897a1001ab93ff807dd17d84f75d9e46c159e228f96ce71ebe645a"
+    },
+    "Steamhammer": {
+      "frame": 10801,
+      "network": [
+        {
+          "role": "host",
+          "peak_queue": 7,
+          "full": 0
+        },
+        {
+          "role": "opponent",
+          "peak_queue": 7,
+          "full": 0
+        }
+      ],
+      "all_commands_verified": true,
+      "actual_target_selection_samples": {
+        "6": {
+          "65": 40,
+          "66": 320,
+          "154": 60
+        },
+        "7": {
+          "66": 172
+        },
+        "9": {}
+      }
+    },
+    "normal_expanded_display": {
+      "run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-182631-680974",
+      "frames": 361,
+      "speed": 42,
+      "render_size": [
+        800,
+        600
+      ],
+      "singlecpu": false
+    }
+  },
+  "runs": {
+    "route5": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-175929-268194",
+      "frames": 2401,
+      "layer_sha256": "49b1ee0eef5f998d3b544a2c80478b13db5ef120658366ffaa2a85cb348b9722",
+      "map_sha256": "9c822b756e6ba243e7f3a929e45234063a51f0edd7d5a7864984399ae68745fa"
+    },
+    "route6": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-180335-820751",
+      "frames": 5001,
+      "layer_sha256": "49b1ee0eef5f998d3b544a2c80478b13db5ef120658366ffaa2a85cb348b9722",
+      "map_sha256": "8b20da3b85373aff34dfe7539118cd21c3f4be5cd52cc837f18d2b196b3e34b3"
+    },
+    "wait": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-175954-003098",
+      "frames": 2401,
+      "layer_sha256": "49b1ee0eef5f998d3b544a2c80478b13db5ef120658366ffaa2a85cb348b9722",
+      "map_sha256": "b11ce98f253ca1b6298eddf334a79a4e8606301de0549394669597f77a314525"
+    },
+    "late": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-175942-414303",
+      "frames": 2401,
+      "layer_sha256": "49b1ee0eef5f998d3b544a2c80478b13db5ef120658366ffaa2a85cb348b9722",
+      "map_sha256": "3e04d717cd4baec97b5bd2209bce31271d5760e4560ad7c776d5abf67caa6266"
+    },
+    "fog": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-180303-491880",
+      "frames": 2401,
+      "layer_sha256": "49b1ee0eef5f998d3b544a2c80478b13db5ef120658366ffaa2a85cb348b9722",
+      "map_sha256": "184418aca35f21e2924036cd41564f35fc4e5d340e7a1b000570fa352ef10ab1"
+    },
+    "defend": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-180027-182490",
+      "frames": 2401,
+      "layer_sha256": "49b1ee0eef5f998d3b544a2c80478b13db5ef120658366ffaa2a85cb348b9722",
+      "map_sha256": "5acb79bc5555534a815372baa2ea2a361ffd2a2f16e7320b5856020066ea203f"
+    },
+    "rally": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-180038-918365",
+      "frames": 2401,
+      "layer_sha256": "49b1ee0eef5f998d3b544a2c80478b13db5ef120658366ffaa2a85cb348b9722",
+      "map_sha256": "592d0c86266395fb050b7d81cb2dbe4c111e8db8a2882782d58d5cc0bc965ace"
+    },
+    "probe": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-180422-915648",
+      "frames": 5001,
+      "layer_sha256": "49b1ee0eef5f998d3b544a2c80478b13db5ef120658366ffaa2a85cb348b9722",
+      "map_sha256": "4963d903adfcfe1e5267b4893da6afc3a6cdf349922528a27376e1348f48ed8c"
+    },
+    "scope": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-180436-902772",
+      "frames": 3001,
+      "layer_sha256": "49b1ee0eef5f998d3b544a2c80478b13db5ef120658366ffaa2a85cb348b9722",
+      "map_sha256": "6ce1088988c81ed778761b07f70f3ead696be2160cf265fb84e0cddf8c1c9466"
+    },
+    "Steamhammer": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-182734-990988",
+      "frames": 10801,
+      "layer_sha256": "49b1ee0eef5f998d3b544a2c80478b13db5ef120658366ffaa2a85cb348b9722",
+      "map_sha256": "45764b9baa72f83a5eb2eab49ddea46c6af21da75bc42e687e6dab93e4e4044e"
+    }
+  },
+  "capture": false,
+  "method": "Original StarCraft native unit/order/HP/visibility telemetry; no screen capture or recording.",
+  "frozen_assets": {
+    "baseline": "4528078cda6d98d202559aea4d9fbf6e401c64c15fb2703b6a8de38f1a54e468",
+    "source": "8ef8ae16cf2f0bbc474b8b2b4cbc23ad7239a3ab1a6551c58a397e4a438fca00"
+  },
+  "startup_reproductions_before_final_fix": [
+    "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-180542-270921",
+    "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-180829-648503",
+    "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-181719-558714",
+    "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-182303-612894"
+  ],
+  "regression_tests": {
+    "cpp_rule_suites": 13,
+    "python_replay_tests": 38
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "passed": true,
+  "game_included": false,
+  "media_included": false,
+  "capture": false,
+  "core_source_unchanged": true,
+  "checks": {
+    "portable-selfcheck.json": {
+      "passed": true,
+      "capture": false,
+      "view": null,
+      "operations": []
+    },
+    "portable-replay-all.json": {
+      "passed": true,
+      "capture": false,
+      "view": "all",
+      "operations": [
+        {
+          "operation": "pause",
+          "frame": 27
+        },
+        {
+          "operation": "seek_forward",
+          "frame": 600
+        },
+        {
+          "operation": "seek_backward_reload",
+          "frame": 120
+        },
+        {
+          "operation": "resume_at_fast_speed",
+          "frame": 190
+        }
+      ]
+    },
+    "portable-replay-self.json": {
+      "passed": true,
+      "capture": false,
+      "view": "self",
+      "operations": [
+        {
+          "operation": "pause",
+          "frame": 27
+        },
+        {
+          "operation": "seek_forward",
+          "frame": 600
+        },
+        {
+          "operation": "seek_backward_reload",
+          "frame": 120
+        },
+        {
+          "operation": "resume_at_fast_speed",
+          "frame": 190
+        }
+      ]
+    }
+  },
+  "archive": "StarCraft-Commander-v12-Windows-x64.zip",
+  "bytes": 85713374,
+  "sha256": "6f58105e4866c47ac6d65375607cd20d4b7f016ff5fe52e45babc4fdf9c5e671"
+}
