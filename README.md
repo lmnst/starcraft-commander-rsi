@@ -50,7 +50,7 @@ GitHub 的 Code → Download ZIP 是源码包，不是上方的可执行运行�
 
 完整操作说明见 [使用说明](使用说明.md)，源码环境和重建方式见 [本地运行与打包](docs/LOCAL_SETUP.md)，验证记录见 [验证说明](docs/VERIFICATION.md)。
 
-人工指挥、回放和联机适配分别位于 `app/CommanderLayer.cpp`、`app/ReplayControl.cpp`、`vendor/local-pc-transport/SNP/`。Python前端及所有回放辅助模块均在 `app/`。原始基线 `v6-fix-r1-20261110` 保持冻结，校验值见 `baseline/manifest.json`；基线和第三方运行文件随Release运行包提供，不混入源码目录。
+人工指挥、回放和联机适配分别位于 `app/CommanderLayer.cpp`、`app/ReplayControl.cpp`、`vendor/local-pc-transport/SNP/`。Python前端及所有回放辅助模块均在 `app/`。原始基线 `v6-fix-r1-20261110` 保持冻结，校验值见 `baseline/manifest.json`；基线源码 [baseline/Bot.cpp](baseline/Bot.cpp) 和冻结DLL [baseline/Baseline.dll](baseline/Baseline.dll) 均已附在仓库内，也包含在Release运行包中；第三方运行环境使用Release包。
 
 测试默认只读取日志、游戏状态、单位坐标、血盾和帧号；构建保持 `COMMANDER_ENABLE_SCREEN_CAPTURE=OFF`。本次战斗规则已通过逐项原生场景、38项回放回归及Steamhammer 10801帧联机回归；可移植运行包另行验证，见发布记录。
 

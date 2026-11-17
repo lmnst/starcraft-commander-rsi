@@ -25,3 +25,12 @@
 发布包验证结果在validation/portable-selfcheck.json、portable-replay-all.json、portable-replay-self.json。验证是当前Windows环境上的实际运行，未声称已在所有Windows电脑上测试。
 
 不使用截图、录屏或WindowRecorder的捕获功能。对局、回放的REP及旁路日志保留在验证机器，不作为示例媒体上传。已知的旧版对手组合问题继续保留在compatibility.json，不把一次短测等同于所有系统上的长期稳定。
+
+
+## 已发布运行包的实际对战补验
+
+从GitHub已发布ZIP的新解压目录启动，禁用开发SDK回退，全部基线、地图、对手及运行库使用包内文件，游戏本体来自用户已安装的1.16.1。
+
+Heartbreak Ridge对PylonPuller推进到预设3601帧，基线代理成功加载；工人增长到14名，已产出作战单位，累计采集1178矿。双方接收队列无溢出。此局在验证帧数上限主动结束，不将其作为自然胜负结果。记录见validation/portable-battle-acceptance.json。
+
+基线版本v6-fix-r1-20261110的完整Bot.cpp与冻结Baseline.dll已同时补入源码仓库和运行包，SHA256保持不变。直接玩的用户仍应下载Releases运行包，而非只有源码和基线的Code ZIP。

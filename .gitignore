@@ -31,7 +31,8 @@ local.settings.json
 *.exp
 *.pdb
 *.zip
-baseline/Bot.cpp
 opponents/*/
 validation/matrix/
 validation/20*/
+
+!baseline/Baseline.dll

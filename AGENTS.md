@@ -13,5 +13,5 @@
 
 ## 保持底层基线不变
 
-- 不修改 `commander_desktop/baseline/Bot.cpp` 和 `commander_desktop/baseline/Baseline.dll`。
-- 对战控制和复盘功能应在上层实现；需要核验冻结资产时使用 `commander_desktop/app/matches.py --validate`。
+- 不修改 `baseline/Bot.cpp` 和 `baseline/Baseline.dll`。
+- 对战控制和复盘功能应在上层实现；需要核验冻结资产时使用 `app/matches.py --validate`。

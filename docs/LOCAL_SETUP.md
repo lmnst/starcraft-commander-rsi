@@ -10,7 +10,7 @@ Skynet为旧版兼容对手，依赖Visual C++ 2008 x86。其他原生模块所�
 
 ## 从源码运行
 
-需要Windows x64、带Tkinter的Python 3.12，以及独立准备的游戏、基线及对手文件。运行包已按以下布局包含这些运行组件；源码包有意排除二进制和个人数据。
+需要Windows x64、带Tkinter的Python 3.12，以及独立准备的游戏、基线及对手文件。运行包已按以下布局包含这些运行组件；源码仓库已提供冻结基线源码与DLL；其余运行二进制和依赖在Release包中，个人数据不分发。
 
 - `baseline/Bot.cpp`、`baseline/Baseline.dll`，须匹配基线清单。
 - `opponents/<名称>/bwapi-data/`，须匹配 `opponents/recorded-roster.json`。
