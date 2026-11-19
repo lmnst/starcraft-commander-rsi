@@ -1,0 +1,198 @@
+{
+  "version": "tenkeys_economy_v11",
+  "engine": "original StarCraft 1.16.1 + BWAPI",
+  "scope": "Isolated UMS fixtures on Destination terrain, plus an ordinary melee mining run. Not an opponent-win benchmark.",
+  "passed": true,
+  "checks": {
+    "1_2_0": {
+      "attack_commands_blocked": 30,
+      "native_mining_samples_without_enemy_attack": 464,
+      "construction_samples": 17,
+      "evade_displacement": 183,
+      "returned_to_mining": true,
+      "mineral_income": 4324,
+      "gas_income": 224,
+      "guards_released_by_0": true
+    },
+    "near_enemy": {
+      "target": [
+        1504,
+        448
+      ],
+      "completed_frame": 49,
+      "only_objective_or_in_range_defence": true,
+      "unrelated_buildings_undamaged": true,
+      "waiting_at_safe_point": 24,
+      "reinforcements_approaching": 1
+    },
+    "outer": {
+      "target": [
+        992,
+        3472
+      ],
+      "completed_frame": 1229,
+      "only_objective_or_in_range_defence": true,
+      "unrelated_buildings_undamaged": true,
+      "waiting_at_safe_point": 29,
+      "reinforcements_approaching": 2
+    },
+    "main": {
+      "target": [
+        2112,
+        3824
+      ],
+      "completed_frame": 1463,
+      "only_objective_or_in_range_defence": true,
+      "unrelated_buildings_undamaged": true,
+      "waiting_at_safe_point": 27,
+      "reinforcements_approaching": 2
+    },
+    "main_initially_hidden": {
+      "target": [
+        2112,
+        3824
+      ],
+      "completed_frame": 1450,
+      "only_objective_or_in_range_defence": true,
+      "unrelated_buildings_undamaged": true,
+      "waiting_at_safe_point": 29,
+      "reinforcements_approaching": 0
+    },
+    "7": {
+      "fleeing_out_of_range_candidates_rejected": 111,
+      "cannon_selected": true,
+      "ordinary_pylon_excluded": true,
+      "local_standby_observed": true
+    },
+    "8": {
+      "rally_waiting": 30,
+      "rally_joining": 1,
+      "rally_new_units": 7,
+      "rally_evading": 0
+    },
+    "3_4_9_0": {
+      "split": "6/24, 18 reserves",
+      "4_preserves_current_tasks": true,
+      "8_respects_squad_scope": true,
+      "9_overrides_squad_to_all": true,
+      "0_returns_to_baseline": true
+    },
+    "natural_mining": {
+      "mineral_income_after_lock": 1184,
+      "completed_probes": 13,
+      "all_completed_probes_guarded": true
+    },
+    "frontends": {
+      "console": "Observed new labels in native desktop window",
+      "game": "Observed four-line Chinese HUD, 13px font/origin/pitch preserved; actual UI keys 2 and 9 recorded",
+      "documentation": [
+        "使用说明.md",
+        "对局复盘与按键迭代指南.md"
+      ],
+      "rule_cpp_suites": 13,
+      "probe_vtable_gate_test": "passed",
+      "replay_unit_tests": 30,
+      "hud_max_width": 490,
+      "hud_width_limit": 628
+    }
+  },
+  "runs": {
+    "probe_mining_reset": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-153837-719836",
+      "fixture": "probe",
+      "layer_sha256": "569e1bbbc800ff41422e15126b201260b363e6c1aeb3881bc0fd54036f2db8e2",
+      "map_sha256": "48e4c1a3e96f0f86e351ee9ed3575b823fa7e76cce8315f70ab0f2467ca52baa",
+      "frames": 5001
+    },
+    "near_enemy": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-153004-505191",
+      "fixture": "near",
+      "layer_sha256": "39130303bba4f93637b2dac3ca3491f5d4de7ebed08b8d3043ad8138340f9e29",
+      "map_sha256": "c95a1019a47144a5a4a666cd38a929be5331c4445d35ae78b632510ea9a2348c",
+      "frames": 3001
+    },
+    "outer": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-153101-441105",
+      "fixture": "outer",
+      "layer_sha256": "39130303bba4f93637b2dac3ca3491f5d4de7ebed08b8d3043ad8138340f9e29",
+      "map_sha256": "1fa4c24dc77e56789ac8933418199f3893feae6c9bafb6c049ba7de9d9e46fd2",
+      "frames": 6001
+    },
+    "main": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-153324-403562",
+      "fixture": "main",
+      "layer_sha256": "39130303bba4f93637b2dac3ca3491f5d4de7ebed08b8d3043ad8138340f9e29",
+      "map_sha256": "febba50200a5276de533d502da550c4755ee0e86ed7cc9ae9a09e57897b74adc",
+      "frames": 6001
+    },
+    "main_initially_hidden": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-154128-424867",
+      "fixture": "hidden",
+      "layer_sha256": "569e1bbbc800ff41422e15126b201260b363e6c1aeb3881bc0fd54036f2db8e2",
+      "map_sha256": "0699816a0aa463e5a4d5bdc063fbbccd81e3c2442b4c27340b6b3b2c5d234ceb",
+      "frames": 6001
+    },
+    "clear": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-153241-096468",
+      "fixture": "clear",
+      "layer_sha256": "39130303bba4f93637b2dac3ca3491f5d4de7ebed08b8d3043ad8138340f9e29",
+      "map_sha256": "b789b2d6900e7cfc6af03adc6b472dea7183971ede61063d84d9683ec8c81fd7",
+      "frames": 5001
+    },
+    "rally": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-153550-341150",
+      "fixture": "rally",
+      "layer_sha256": "39130303bba4f93637b2dac3ca3491f5d4de7ebed08b8d3043ad8138340f9e29",
+      "map_sha256": "b789b2d6900e7cfc6af03adc6b472dea7183971ede61063d84d9683ec8c81fd7",
+      "frames": 6001
+    },
+    "scope": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-153625-400105",
+      "fixture": "scope",
+      "layer_sha256": "39130303bba4f93637b2dac3ca3491f5d4de7ebed08b8d3043ad8138340f9e29",
+      "map_sha256": "0699816a0aa463e5a4d5bdc063fbbccd81e3c2442b4c27340b6b3b2c5d234ceb",
+      "frames": 4001
+    },
+    "squad_rally_global_defence": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-154316-186360",
+      "fixture": "squad",
+      "layer_sha256": "569e1bbbc800ff41422e15126b201260b363e6c1aeb3881bc0fd54036f2db8e2",
+      "map_sha256": "0699816a0aa463e5a4d5bdc063fbbccd81e3c2442b4c27340b6b3b2c5d234ceb",
+      "frames": 4001
+    },
+    "natural_melee_mining": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-154420-703242",
+      "fixture": false,
+      "layer_sha256": "569e1bbbc800ff41422e15126b201260b363e6c1aeb3881bc0fd54036f2db8e2",
+      "map_sha256": "0241ae7e8b43632e3421444aa3ca3bb10d28b4796f4ccc138103c3b75e5158a5",
+      "frames": 3601
+    },
+    "ui_real_keys": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-153935-226893",
+      "fixture": "near",
+      "layer_sha256": "569e1bbbc800ff41422e15126b201260b363e6c1aeb3881bc0fd54036f2db8e2",
+      "map_sha256": "edaf947d0ae93197f61aceb5d9c32bd77797e47667e056e41897438cd6084b2a",
+      "frames": 1601
+    }
+  },
+  "final_hashes": {
+    "build/CommanderLayer.dll": "569e1bbbc800ff41422e15126b201260b363e6c1aeb3881bc0fd54036f2db8e2",
+    "app/CommanderLayer.cpp": "f7496aa4e03e5df79157582d5b35e4513c0b5c4cf2bb2c04c304f98107c8032d",
+    "app/ProbeCommandGuard.h": "45aabf58ccc933e8d6019b4fa0ab4697439afb3e4625d8aa1b2caf332e73091f",
+    "app/CommanderMining.h": "79fd35c9eddccad52faf50d1254fa97106a5840a65b723dff99aa6e8be991b85",
+    "app/CommanderClear.h": "4cd1d409eb02933fa0746c73275899fbc54e72d6d078d1e010dccc2a85d81d95",
+    "app/CommanderRaid.h": "919cc33b64b133bea3367853f7eb69b209ca20c87c9f643762212bf7eb06ea8f",
+    "app/CommanderHudText.h": "e7f7905b4fd4a9cab755cae878e6bddfc5adafe00def0118e2eb943a4cba49e5",
+    "app/desktop.pyw": "25b3b27e6774549e2443f378e6b378846bfe30a351f2257898dd51c26d9e7170",
+    "app/replay_review.py": "68b5c175a383699c838cc3cd7fc862e2f26b8f80b4c0d9b14b645c43b7323b83",
+    "使用说明.md": "e6cb4fba68a2155baf765232ae07ed75c389a8b618f3d61083386c571bf9735d",
+    "对局复盘与按键迭代指南.md": "850efc26f5fc02e8e577fc17d86f617a15b566bb3aad2bb8044a13e6ec4840ab",
+    "baseline/Bot.cpp": "8ef8ae16cf2f0bbc474b8b2b4cbc23ad7239a3ab1a6551c58a397e4a438fca00",
+    "baseline/Baseline.dll": "4528078cda6d98d202559aea4d9fbf6e401c64c15fb2703b6a8de38f1a54e468"
+  },
+  "notes": [
+    "Earlier failed fixture-authoring attempts are excluded from accepted evidence.",
+    "Some army cases precede the final probe-threat cooldown detection fix and HUD label edits; army control code was unchanged afterward.",
+    "A new reinforcement may still be travelling at the end of the observation window; safe waiting counts describe actual arrivals."
+  ]
+}

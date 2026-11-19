@@ -167,6 +167,7 @@ def prepare(slot, map_name, room, speed, control, opponent=None, fullscreen=True
         f"renderer={'opengl' if host else 'direct3d9'}\nshader={shader}\n"
         f"maintas=true\nboxing={'false' if expanded else 'true'}\nborder=false\nsavesettings=0\n"
         f"singlecpu={'false' if room or opponent_hosts else 'true'}\n"
+        + ("devmode=true\nposX=-30000\nposY=-30000\ncenter_window=0\n" if not host else "")
         + ("devmode=true\nposX=0\nposY=-32000\ncenter_window=0\n" if replay else "")
         + "[StarCraft]\ngame_handles_close=true\n", encoding="ascii")
     configuration = (
@@ -283,6 +284,8 @@ def playing(run, map_name, opponent_name, control="human", speed=42, fullscreen=
 def run_match(run, map_name, opponent_name, control, speed, fullscreen, update, smoke_frames,
               opponent_hosts, keep_results, render_profile):
     from replay_info import save_match_labels
+    from match_windows import MatchWindows, POLICY as WINDOW_POLICY
+    windows = None
     games = GameProcesses()
     peers = GameProcesses()
     status = dict(map=map_name, opponent=opponent_name, baseline=BASELINE, baseline_sha256=BASELINE_HASH,
@@ -323,7 +326,11 @@ def run_match(run, map_name, opponent_name, control, speed, fullscreen, update, 
             status["display_adapter_sha256"] = digest(run / "bwapi-data/WideView.dll")
             status["display_expander_sha256"] = EXPANDER_HASH
         status["map_sha256"] = MAPS[map_name][1]
+        status["window_policy"] = WINDOW_POLICY
+        status["window_log"] = "bwapi-data/write/window-focus.jsonl"
         store(run / "match.json", status)
+        windows = MatchWindows(run,fullscreen,VIEWPORTS[render_profile],integer=render_profile=="standard")
+        windows.start()
         if opponent:
             guest = peers.launch(enemy, enemy_env)
             if opponent["kind"] == "java":
@@ -336,6 +343,8 @@ def run_match(run, map_name, opponent_name, control, speed, fullscreen, update, 
         hwnd_file = output / "game-window.txt"
         deadline = time.monotonic() + 65
         while not verify_hwnd(hwnd_file):
+            if windows.failure:
+                raise RuntimeError("窗口管理器异常："+windows.failure)
             if host.poll() is not None:
                 raise RuntimeError(f"我方客户端在进入对局前已退出（{host.returncode}）。")
             if opponent and guest.poll() is not None:
@@ -349,6 +358,8 @@ def run_match(run, map_name, opponent_name, control, speed, fullscreen, update, 
         update("正在对战。结束后自动保存 .rep，并保留战绩统计页面供你查看。")
         play_deadline = time.monotonic() + 55 if smoke_frames else float("inf")
         while host.poll() is None and not (end := read_json(end_file)):
+            if windows.failure:
+                raise RuntimeError("窗口管理器异常："+windows.failure)
             if time.monotonic() >= play_deadline:
                 raise RuntimeError("验证局未在预期时间内推进。")
             if opponent and guest.poll() is not None:
@@ -411,6 +422,8 @@ def run_match(run, map_name, opponent_name, control, speed, fullscreen, update, 
                 status.setdefault("ended_at", datetime.now().astimezone().isoformat())
                 save_record()
         finally:
+            if windows:
+                windows.stop()
             if peers.files and any(not output.closed for output in peers.files):
                 peers.close()
             if games.files and any(not output.closed for output in games.files):

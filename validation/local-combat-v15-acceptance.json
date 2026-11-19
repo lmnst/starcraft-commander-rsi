@@ -1,0 +1,113 @@
+{
+  "status": "passed",
+  "layer_sha256": "a50835fd9361156c59e00290a31ec752dc5398886f3b8d1a15d01f9291103c43",
+  "capture": false,
+  "baseline_untouched": true,
+  "runs": {
+    "guard": {
+      "run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261118-085401-643095",
+      "frame": 1801
+    },
+    "cloak5": {
+      "run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261118-085408-714597",
+      "frame": 1801
+    },
+    "cloak6": {
+      "run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261118-085414-765986",
+      "frame": 1801
+    },
+    "cloak7": {
+      "run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261118-085420-486177",
+      "frame": 1801
+    },
+    "assembly": {
+      "run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261118-085426-403443",
+      "frame": 1801
+    },
+    "compat-wait": {
+      "run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261118-085432-885422",
+      "frame": 2401
+    },
+    "compat-bait": {
+      "run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261118-085440-614030",
+      "frame": 2401
+    },
+    "compat-cloak": {
+      "run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261118-085448-126921",
+      "frame": 2401
+    },
+    "compat-keys": {
+      "run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261118-085458-198589",
+      "frame": 2401
+    },
+    "duel": {
+      "run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261118-085505-836452",
+      "frame": 6001
+    }
+  },
+  "native_proofs": {
+    "guard": {
+      "same_task_reanchors": 3,
+      "native_message_presses": 2,
+      "reanchor_distance": 296.3545174280291,
+      "outside_old_field_orders": 47,
+      "outside_old_post_defence": 27,
+      "native_shots": 15,
+      "worker_attacks": 0
+    },
+    "cloak5": {
+      "safe_combat_events": 73,
+      "engine_fire_samples_during_pause": 13,
+      "resume_events": 2,
+      "min_contact_distance": 258.0174412709342,
+      "same_task_continued": true
+    },
+    "cloak6": {
+      "safe_combat_events": 30,
+      "engine_fire_samples_during_pause": 8,
+      "resume_events": 44,
+      "min_contact_distance": 256.40007800310826,
+      "same_task_continued": true
+    },
+    "cloak7": {
+      "safe_combat_events": 51,
+      "engine_fire_samples_during_pause": 5,
+      "resume_events": 12,
+      "min_contact_distance": 256.03124809288414,
+      "same_task_continued": true
+    },
+    "assembly": {
+      "fixed_original_anchor": true,
+      "max_front_distance": 283.24018076537095,
+      "common_refuge_points": 6,
+      "returned_to_posts": true,
+      "late_max_post_distance": 41.0
+    }
+  },
+  "compatibility": {
+    "wait": {
+      "army_after_reinforcements": 22,
+      "front_posts_preserved": true
+    },
+    "bait": {
+      "worker_attacks": 0
+    },
+    "cloak": {
+      "protected_and_resumed_same_task": true
+    },
+    "keys": {
+      "alt8_9_0_received": true,
+      "repeat_suppressed": true
+    }
+  },
+  "duel_network": {
+    "20261118-085505-836452": {
+      "queue_full": 0,
+      "last_callback": 5880
+    },
+    "opponent": {
+      "queue_full": 0,
+      "last_callback": 6000
+    }
+  }
+}

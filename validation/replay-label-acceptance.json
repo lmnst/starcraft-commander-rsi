@@ -1,0 +1,107 @@
+{
+  "passed": true,
+  "test_match": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261110-221701-115695",
+  "saved": {
+    "map": "Heartbreak Ridge",
+    "opponent": "PylonPuller",
+    "control": "human",
+    "started_at": "2026-11-10T22:17:01.502495+08:00",
+    "self_player_id": 1,
+    "players": [
+      {
+        "id": 0,
+        "name": "UAlbertaBot",
+        "race": "Protoss",
+        "color_id": 159,
+        "text_color": 15,
+        "color_rgb": [
+          44,
+          180,
+          148
+        ]
+      },
+      {
+        "id": 1,
+        "name": "StarterBot",
+        "race": "Protoss",
+        "color_id": 111,
+        "text_color": 8,
+        "color_rgb": [
+          244,
+          4,
+          4
+        ]
+      }
+    ],
+    "map_actual": "\u0007´ÜÀåÀÇ \u0006´É¼± \u00051.1",
+    "our_player_name": "StarterBot"
+  },
+  "played": {
+    "map": "Heartbreak Ridge",
+    "opponent": "PylonPuller",
+    "control": "human",
+    "started_at": "2026-11-10T22:17:01.502495+08:00",
+    "self_player_id": 1,
+    "players": [
+      {
+        "id": 0,
+        "name": "UAlbertaBot",
+        "race": "Protoss",
+        "color_id": 159,
+        "text_color": 15,
+        "color_rgb": [
+          44,
+          180,
+          148
+        ]
+      },
+      {
+        "id": 1,
+        "name": "StarterBot",
+        "race": "Protoss",
+        "color_id": 111,
+        "text_color": 8,
+        "color_rgb": [
+          244,
+          4,
+          4
+        ]
+      }
+    ],
+    "map_actual": "\u0007´ÜÀåÀÇ \u0006´É¼± \u00051.1",
+    "our_player_name": "StarterBot"
+  },
+  "legacy": {
+    "map": "Heartbreak Ridge",
+    "opponent": "原版电脑（练习）",
+    "started_at": "2026-11-10T17:35:15.6625272+08:00",
+    "our_player_name": "StarBench",
+    "map_actual": "\u0007´ÜÀåÀÇ \u0006´É¼± \u00051.1",
+    "players": [
+      {
+        "id": 0,
+        "name": "Sargas Tribe",
+        "race": "Protoss",
+        "color_id": 165,
+        "text_color": 14,
+        "color_rgb": [
+          12,
+          72,
+          204
+        ]
+      },
+      {
+        "id": 1,
+        "name": "StarBench",
+        "race": "Protoss",
+        "color_id": 135,
+        "text_color": 23,
+        "color_rgb": [
+          252,
+          252,
+          56
+        ]
+      }
+    ]
+  }
+}

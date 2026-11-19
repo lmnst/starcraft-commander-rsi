@@ -1,8 +1,8 @@
 # 星际指挥台
 
-Windows 本地对战与完整原生回放工具，当前为 **十键 v12（2026-11-17）**。
+Windows 本地对战与完整原生回放工具，当前为 **上排按键 v17（2026-11-19）**。
 
-**[下载 Windows x64 运行包](https://github.com/zyd-go/starcraft-commander-demo/releases/download/v12-20261117/StarCraft-Commander-v12-Windows-x64.zip)** · [所有发布版本](https://github.com/zyd-go/starcraft-commander-demo/releases)
+**[下载 Windows x64 运行包](https://github.com/zyd-go/starcraft-commander-demo/releases/download/v17-20261119/StarCraft-Commander-v17-Windows-x64.zip)** · [所有发布版本](https://github.com/zyd-go/starcraft-commander-demo/releases)
 
 运行包自带 Python/Tk、Java、指挥层、回放层、固定版本对手和必要运行组件，**不包含游戏本体，也不包含任何具体对局录像或视频**。下载者需已有 **StarCraft: Brood War 1.16.1**；重制版和其他版本不适用。
 
@@ -15,9 +15,9 @@ Windows 本地对战与完整原生回放工具，当前为 **十键 v12（2026-
 
 GitHub 的 Code → Download ZIP 是源码包，不是上方的可执行运行包。Windows 可能对未签名程序显示安全提示；此项目没有代码签名。Skynet 使用旧版 BWAPI，若其旧版 CRT 缺失，需要安装 Microsoft Visual C++ 2008 x86 运行库；其他对手不使用这项旧依赖。已知组合的兼容性见 `validation/compatibility.json`。
 
-## 十键指挥
+## 当前按键
 
-使用键盘上排数字键，不是 F 键或小键盘。
+使用键盘上排1～9、0和紧挨0右侧的减号键，所有指令均单键触发。
 
 | 键 | 行为 |
 | --- | --- |
@@ -26,13 +26,14 @@ GitHub 的 Code → Download ZIP 是源码包，不是上方的可执行运行�
 | 3 | 动态小队：约健康兵力四分之一，自动补兵，至少留6名健康兵回防 |
 | 4 | 选择全队范围，保留当前任务 |
 | 5 | 进攻近敌／分矿建筑，沿途先打敌军和炮台，再继续原建筑目标 |
-| 6 | 进攻主基地，沿途先接战，再继续原建筑目标 |
-| 7 | 持续区域警戒，敌军再现自动接战；不攻击、不追逐探机 |
-| 8 | 先脱险，再到共同安全点集结待命 |
-| 9 | 全军回防，分守基地，不被探机引走 |
-| 0 | 全局重置，解除采矿锁和人工任务，交回原始 Bot |
+| 6 | 主基地区域清场：敌军、炮台优先，从外围水晶等建筑逐步推进，清完后安全集结 |
+| 7 | 持续就近警戒，敌军再现自动接战；忽略探机，再按7更新警戒位置 |
+| 8 | 原地集结等援兵：前线守位、后方赶来，受压共同局部避险，安全后归位 |
+| 9 | 安全撤离集结：先脱险，再到共同安全点等候（原Alt+8） |
+| 0 | 全军回防，分守基地，不被探机引走；保留采矿锁 |
+| - | 全局重置，解除采矿锁和人工任务，交回原始 Bot |
 
-5／6目标完成后安全撤离待命。对同一目标重复按5／6、或重复按7，保留原任务和集火状态。5／6援军先汇合主力；真正敌军的追击有距离和时间边界。
+5～9按当前小队／全队范围执行，0始终接管全军回防。5／6目标完成后安全撤离待命；重复5／6保留原任务和集火，重复7更新警戒位置。观察者跟随实际前线，5／6／7遇未侦测隐刀时局部避险或等反隐，到位后继续原任务。新局记录v17实际键位，旧回放仍按各自版本解释。
 
 ## 完整回放功能
 
@@ -52,6 +53,6 @@ GitHub 的 Code → Download ZIP 是源码包，不是上方的可执行运行�
 
 人工指挥、回放和联机适配分别位于 `app/CommanderLayer.cpp`、`app/ReplayControl.cpp`、`vendor/local-pc-transport/SNP/`。Python前端及所有回放辅助模块均在 `app/`。原始基线 `v6-fix-r1-20261110` 保持冻结，校验值见 `baseline/manifest.json`；基线源码 [baseline/Bot.cpp](baseline/Bot.cpp) 和冻结DLL [baseline/Baseline.dll](baseline/Baseline.dll) 均已附在仓库内，也包含在Release运行包中；第三方运行环境使用Release包。
 
-测试默认只读取日志、游戏状态、单位坐标、血盾和帧号；构建保持 `COMMANDER_ENABLE_SCREEN_CAPTURE=OFF`。本次战斗规则已通过逐项原生场景、38项回放回归及Steamhammer 10801帧联机回归；可移植运行包另行验证，见发布记录。
+测试默认只读取日志、游戏状态、单位坐标、血盾和帧号；构建保持 `COMMANDER_ENABLE_SCREEN_CAPTURE=OFF`。v13～v17的反隐、集结、警戒、窗口管理和主基地区域清场沿用本机已验证实现；v17另有真实Windows按键消息验证及旧版回放回归，见 [验证说明](docs/VERIFICATION.md)。
 
 游戏、BWAPI、BWEM、cnc-ddraw、Java及第三方Bot的权利和许可属于各自作者，参见 [第三方说明](THIRD_PARTY.md)。

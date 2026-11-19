@@ -1,0 +1,157 @@
+{
+  "passed": true,
+  "keymap": "tenkeys_detection_v13",
+  "layer_sha256": "dba531418eddde49708a08d669a4e7a7a991cd299bcb6c8399b28a10f32d74c5",
+  "baseline_source_sha256": "8ef8ae16cf2f0bbc474b8b2b4cbc23ad7239a3ab1a6551c58a397e4a438fca00",
+  "baseline_dll_sha256": "4528078cda6d98d202559aea4d9fbf6e401c64c15fb2703b6a8de38f1a54e468",
+  "capture": false,
+  "method": "Original StarCraft game unit positions, native commands, live detection flags and HP/shields.",
+  "checks": {
+    "late5": {
+      "original_task_preserved": true,
+      "guards": 250,
+      "detection_resumes": 4,
+      "native_dark_templar_attack_orders": 6,
+      "max_guard_displacement_pixels": 587.5,
+      "army_before_detector_arrival": 16,
+      "surviving_army_after_resumed_combat": 16,
+      "max_actual_front_vs_all_army_mean_pixels": 92.8,
+      "surviving_observers": 2,
+      "observer_hp_shields": [
+        [
+          40,
+          20
+        ],
+        [
+          40,
+          20
+        ]
+      ]
+    },
+    "late6": {
+      "original_task_preserved": true,
+      "guards": 316,
+      "detection_resumes": 15,
+      "native_dark_templar_attack_orders": 51,
+      "max_guard_displacement_pixels": 575.9,
+      "army_before_detector_arrival": 16,
+      "surviving_army_after_resumed_combat": 15,
+      "max_actual_front_vs_all_army_mean_pixels": 433.0,
+      "surviving_observers": 2,
+      "observer_hp_shields": [
+        [
+          40,
+          20
+        ],
+        [
+          40,
+          20
+        ]
+      ]
+    },
+    "late7": {
+      "original_task_preserved": true,
+      "guards": 238,
+      "detection_resumes": 5,
+      "native_dark_templar_attack_orders": 46,
+      "max_guard_displacement_pixels": 569.6,
+      "army_before_detector_arrival": 16,
+      "surviving_army_after_resumed_combat": 15,
+      "max_actual_front_vs_all_army_mean_pixels": 249.5,
+      "surviving_observers": 2,
+      "observer_hp_shields": [
+        [
+          40,
+          20
+        ],
+        [
+          40,
+          20
+        ]
+      ]
+    },
+    "actual_damage_after_detection": {
+      "observed_hp_shields": [
+        [
+          15,
+          1
+        ],
+        [
+          80,
+          1
+        ],
+        [
+          80,
+          2
+        ],
+        [
+          80,
+          40
+        ]
+      ]
+    },
+    "missing_detector": {
+      "last_guard_frame": 1776,
+      "no_blind_advance_or_false_resume": true
+    },
+    "8_9_0_override": {
+      "rally_frame": 823,
+      "defend_frame": 1227,
+      "reset_frame": 1727,
+      "observer_and_army_released": true
+    },
+    "single_observer_squad": {
+      "squad_units": 4,
+      "reserve_units": 12,
+      "observer_count": 1,
+      "supports_actual_attack_even_after_contact_clears": true,
+      "task_id": 2
+    },
+    "steamhammer_integration": {
+      "self_game_end_frame": 9001,
+      "last_delegate_return_frames": [
+        8880,
+        9000
+      ],
+      "queue_full_events": 0,
+      "native_crashes": 0
+    }
+  },
+  "runs": {
+    "late5": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-203509-702972",
+      "frames": 2401,
+      "layer_sha256": "dba531418eddde49708a08d669a4e7a7a991cd299bcb6c8399b28a10f32d74c5"
+    },
+    "late6": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-203517-552732",
+      "frames": 2401,
+      "layer_sha256": "dba531418eddde49708a08d669a4e7a7a991cd299bcb6c8399b28a10f32d74c5"
+    },
+    "late7": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-203525-521253",
+      "frames": 2401,
+      "layer_sha256": "dba531418eddde49708a08d669a4e7a7a991cd299bcb6c8399b28a10f32d74c5"
+    },
+    "missing7": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-203533-477458",
+      "frames": 1801,
+      "layer_sha256": "dba531418eddde49708a08d669a4e7a7a991cd299bcb6c8399b28a10f32d74c5"
+    },
+    "switch": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-203540-671012",
+      "frames": 2401,
+      "layer_sha256": "dba531418eddde49708a08d669a4e7a7a991cd299bcb6c8399b28a10f32d74c5"
+    },
+    "squad6": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-203548-490639",
+      "frames": 2401,
+      "layer_sha256": "dba531418eddde49708a08d669a4e7a7a991cd299bcb6c8399b28a10f32d74c5"
+    },
+    "steamhammer": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-203634-441843",
+      "frames": 9001,
+      "layer_sha256": "dba531418eddde49708a08d669a4e7a7a991cd299bcb6c8399b28a10f32d74c5"
+    }
+  }
+}

@@ -5,6 +5,11 @@ using namespace CommanderClear;
 int main() {
     assert(target(false,false,true,false,384)); // Fixed encounter boundary.
     assert(!target(false,false,true,false,385)); // No distant army pursuit.
+    assert(target(false,false,true,true,1000,false,true)); // Close self-defence overrides the old field boundary.
+    assert(!target(true,false,true,true,1000,false,true)); // Worker bait never overrides it.
+    assert(localDefence(false,true,true,false,false,60));
+    assert(localDefence(false,true,false,true,false,0));
+    assert(!localDefence(false,true,true,false,true,300));
     assert(!target(true,false,false,false,40)); // No worker raid.
     assert(!target(false,true,true,false,40)); // No ordinary building demolition.
     assert(target(false,true,true,true,40,true)); // Defensive structures belong to clear.

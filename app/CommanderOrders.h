@@ -139,7 +139,7 @@ public:
         result.accepted=true;result.status=result.units.empty()?"waiting_units":"applied";
         return result;
     }
-    // 8, like 0, has global scope. It replaces both offensive and reserve
+    // 9, like 0, has global scope. It replaces both offensive and reserve
     // tasks, even when the player last selected the squad mode.
     Result defendAll(const std::vector<Candidate>& candidates) {
         select(Scope::All);return assign(candidates);

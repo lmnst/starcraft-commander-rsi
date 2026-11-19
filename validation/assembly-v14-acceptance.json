@@ -1,0 +1,125 @@
+{
+  "passed": true,
+  "keymap": "tenkeys_assembly_v14",
+  "layer_sha256": "13c9747055685fabef1357a8c73072f8d7f16e73859b3cdd8c030c6b4c9139ad",
+  "capture": false,
+  "baseline_source_sha256": "8ef8ae16cf2f0bbc474b8b2b4cbc23ad7239a3ab1a6551c58a397e4a438fca00",
+  "baseline_dll_sha256": "4528078cda6d98d202559aea4d9fbf6e401c64c15fb2703b6a8de38f1a54e468",
+  "checks": {
+    "8_wait_and_reinforce": {
+      "anchor": [
+        2032,
+        640
+      ],
+      "frontline_units": 12,
+      "frontline_displacement_pixels": 0,
+      "rear_units_arrived": 4,
+      "new_units_arrived": 6,
+      "units_waiting_at_end": 22,
+      "repeat_keeps_task_and_anchor": true
+    },
+    "worker_bait": {
+      "worker_actually_attacked": true,
+      "worker_undamaged": true,
+      "frontline_displacement_pixels": 0
+    },
+    "in_range_fire_and_no_chase": {
+      "native_attacks": 25,
+      "actual_enemy_damage": true,
+      "enemy_out_of_range_frame": 360,
+      "no_attack_orders_after_enemy_left": true
+    },
+    "8_detection_protection": {
+      "guards": 323,
+      "resumes": 16,
+      "same_anchor_after_detection": [
+        2032,
+        640
+      ],
+      "returns_to_waiting_without_new_key": true,
+      "observers": 2
+    },
+    "squad_inheritance": {
+      "initial_squad": 4,
+      "grown_squad": 5,
+      "total_army": 22,
+      "same_anchor": [
+        2032,
+        640
+      ]
+    },
+    "native_alt8_8_9_0_input": {
+      "command_count": 5,
+      "posted_key_sequences": 4,
+      "repeat_suppressed": true,
+      "alt8_actual_withdrawal_pixels": 291.8,
+      "9_global_defence": true,
+      "0_released_orders": true
+    },
+    "late5_regression": {
+      "original_building_completed": true,
+      "automatic_safe_withdrawal_preserved": true
+    },
+    "late6_regression": {
+      "original_building_completed": true,
+      "automatic_safe_withdrawal_preserved": true
+    },
+    "steamhammer_integration": {
+      "self_game_end_frame": 9001,
+      "last_delegate_return_frames": [
+        8880,
+        9000
+      ],
+      "native_crashes": 0,
+      "queue_full_events": 0,
+      "intentional_smoke_stop": 9000
+    }
+  },
+  "runs": {
+    "wait": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-205820-311356",
+      "frames": 2401,
+      "layer_sha256": "13c9747055685fabef1357a8c73072f8d7f16e73859b3cdd8c030c6b4c9139ad"
+    },
+    "bait": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-210329-023633",
+      "frames": 2401,
+      "layer_sha256": "13c9747055685fabef1357a8c73072f8d7f16e73859b3cdd8c030c6b4c9139ad"
+    },
+    "combat": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-210536-234799",
+      "frames": 2401,
+      "layer_sha256": "13c9747055685fabef1357a8c73072f8d7f16e73859b3cdd8c030c6b4c9139ad"
+    },
+    "cloak": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-205844-640173",
+      "frames": 2401,
+      "layer_sha256": "13c9747055685fabef1357a8c73072f8d7f16e73859b3cdd8c030c6b4c9139ad"
+    },
+    "squad": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-210706-377877",
+      "frames": 2401,
+      "layer_sha256": "13c9747055685fabef1357a8c73072f8d7f16e73859b3cdd8c030c6b4c9139ad"
+    },
+    "keys": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-205900-437387",
+      "frames": 2401,
+      "layer_sha256": "13c9747055685fabef1357a8c73072f8d7f16e73859b3cdd8c030c6b4c9139ad"
+    },
+    "late5": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-210345-287582",
+      "frames": 2401,
+      "layer_sha256": "13c9747055685fabef1357a8c73072f8d7f16e73859b3cdd8c030c6b4c9139ad"
+    },
+    "late6": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-210352-992707",
+      "frames": 2401,
+      "layer_sha256": "13c9747055685fabef1357a8c73072f8d7f16e73859b3cdd8c030c6b4c9139ad"
+    },
+    "steamhammer": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-205957-060881",
+      "frames": 9001,
+      "layer_sha256": "13c9747055685fabef1357a8c73072f8d7f16e73859b3cdd8c030c6b4c9139ad"
+    }
+  }
+}

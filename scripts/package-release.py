@@ -23,6 +23,8 @@ def main():
     parser.add_argument('--lab',type=Path,required=True)
     parser.add_argument('--display',type=Path,required=True)
     parser.add_argument('--skip-freeze',action='store_true')
+    parser.add_argument('--version',default='v17-20261119')
+    parser.add_argument('--output-name',default='StarCraft-Commander-v17')
     args=parser.parse_args()
     freeze=ROOT/'build/frozen'
     if not args.skip_freeze:
@@ -30,7 +32,9 @@ def main():
             '--name','星际指挥台','--distpath',str(freeze),'--workpath',str(ROOT/'build/pyinstaller'),
             '--specpath',str(ROOT/'build'),'--paths',str(ROOT/'app'),'--noupx',
             str(ROOT/'app/desktop.pyw')],check=True)
-    package=ROOT/'dist/StarCraft-Commander'
+    package=ROOT/'dist'/args.output_name
+    if package.parent.resolve()!=(ROOT/'dist').resolve():
+        raise ValueError('Output name must be a direct child of dist')
     if package.exists():
         raise FileExistsError('Use a fresh output directory; do not merge in personal settings or match caches: '+str(package))
     shutil.copytree(freeze/'星际指挥台',package)
@@ -64,13 +68,13 @@ def main():
     java=(args.lab/settings['java']).resolve().parent.parent
     shutil.copytree(java,package/'runtime/jre')
     (package/'validation').mkdir()
-    for name in ['compatibility.json','20261117-combat-v12-acceptance.json']:
+    for name in ['compatibility.json','20261117-combat-v12-acceptance.json','top-row-v17-acceptance.json']:
         copy(ROOT/'validation'/name,package/'validation'/name)
     files=[p for p in package.rglob('*') if p.is_file()]
     forbidden=[str(p.relative_to(package)) for p in files if p.name.lower()=='starcraft.exe' or p.suffix.lower() in ('.mpq','.rep','.mp4','.webm') or p.name in ('local.settings.json','preferences.json')]
     if forbidden:raise RuntimeError('Forbidden game/media/personal files: '+str(forbidden))
     hashes={p.relative_to(package).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
-    (package/'PACKAGE_MANIFEST.json').write_text(json.dumps({'version':'v12-20261117','game_included':False,
+    (package/'PACKAGE_MANIFEST.json').write_text(json.dumps({'version':args.version,'game_included':False,
         'replay_media_included':False,'capture_enabled':False,'files':hashes},ensure_ascii=False,indent=2),encoding='utf8')
     print(json.dumps({'package':str(package),'files':len(files),'MiB':round(sum(p.stat().st_size for p in files)/1024**2,1)}),flush=True)
 

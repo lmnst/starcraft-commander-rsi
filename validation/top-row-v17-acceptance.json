@@ -1,0 +1,34 @@
+{
+  "keymap": "toprow_commands_v17",
+  "physical_keys": {
+    "9": "安全撤离集结",
+    "0": "全军回防",
+    "-": "全局重置"
+  },
+  "minus_virtual_key": "VK_OEM_MINUS (0xBD), immediately right of 0",
+  "native_run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261119-095417-632264",
+  "native_checks": {
+    "all_inputs_posted": true,
+    "physical_key_sequence": true,
+    "actions": true,
+    "versioned_plain_keys": true,
+    "defence_keeps_mining_lock": true,
+    "minus_resets_everything": true,
+    "hud_new_keys": true,
+    "hud_physical_minus": true,
+    "no_capture": true
+  },
+  "native_bad_orders": 0,
+  "replay_unit_tests": 37,
+  "cpp_tests": [
+    "test_commander_top_row",
+    "test_commander_assembly"
+  ],
+  "frozen_sha256": {
+    "Bot.cpp": "8ef8ae16cf2f0bbc474b8b2b4cbc23ad7239a3ab1a6551c58a397e4a438fca00",
+    "Baseline.dll": "4528078cda6d98d202559aea4d9fbf6e401c64c15fb2703b6a8de38f1a54e468"
+  },
+  "layer_sha256": "266a6a96b0f792ebad689e93b3610688f2b7b2898e45a05b3fb79da40d84b129",
+  "screen_capture_enabled": false,
+  "legacy_replays_preserved": true
+}

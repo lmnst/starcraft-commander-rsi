@@ -1,0 +1,16 @@
+{
+  "replay_session": "playback/20261110-215649-547361",
+  "placement": "lower console inside game viewport",
+  "replay_cursor_unlocked": true,
+  "pause_clicked": {
+    "frame": 1286,
+    "paused": true
+  },
+  "slider_dragged": {
+    "target": 7769,
+    "frame": 7771,
+    "seeking": false,
+    "paused": true
+  },
+  "baseline_map_opponent_hashes": "passed"
+}

@@ -96,5 +96,8 @@ int main() {
     Engagement siegeApproach;siegeApproach.commit(0,{0,0},30,false);
     assert(!siegeApproach.needsRelease(1000,{300,0},sieged));
     assert(siegeApproach.choose(1000,{300,0},{ordinary,sieged}).id==30);
+    Engagement local;local.releasing=true;local.ignored[3]=9999;
+    auto close=dragoon(3,0,false);close.armed=true;close.inRange=true;
+    assert(local.choose(1000,{1000,0},{close}).id==3); // An old chase cooldown cannot block an armed enemy already in range.
     std::cout<<"Threat tiers, attacking Probes, target switching, fixed chase anchor, cooldown and static-defense tests passed\n";
 }

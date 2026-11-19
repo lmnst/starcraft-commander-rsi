@@ -4,8 +4,11 @@
 namespace CommanderClear {
 constexpr double radius=384;
 constexpr int clearFrames=72;
-inline bool target(bool worker,bool building,bool combat,bool /*activeThreat*/,double fromOrigin,bool defensiveBuilding=false) {
-    return !worker && fromOrigin<=radius && (building?defensiveBuilding:combat);
+inline bool target(bool worker,bool building,bool combat,bool /*activeThreat*/,double fromOrigin,bool defensiveBuilding=false,bool localDefence=false) {
+    return !worker && (fromOrigin<=radius || localDefence) && (building?defensiveBuilding:combat);
+}
+inline bool localDefence(bool worker,bool combat,bool active,bool inRange,bool fleeing,double distance) {
+    return !worker && combat && (inRange || (active && !fleeing && distance<=192));
 }
 inline bool approach(bool /*stationary*/,bool inRange,bool /*fleeing*/,double distance) {
     return inRange || distance<=400;

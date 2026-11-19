@@ -1,0 +1,125 @@
+{
+  "passed": true,
+  "policies": [
+    "ignore_workers_v2",
+    "ignore_worker_bait_v1"
+  ],
+  "engine": "Original StarCraft 1.16.1, isolated UMS scenes on Destination terrain",
+  "checks": {
+    "7_only_worker": {
+      "army": 24,
+      "max_displacement_pixels": 0.0,
+      "worker_undamaged": true,
+      "worker_was_actively_attacking": true,
+      "immediate_in_place_wait": true
+    },
+    "7_mixed": {
+      "worker_candidates_all_rejected": true,
+      "normal_combat_targets": [
+        39,
+        162
+      ],
+      "local_wait_after_clear": true
+    },
+    "9_worker_at_expansion": {
+      "allocation": "17 main / 7 expansion throughout",
+      "worker_pressure": 0,
+      "no_reinforcement_for_worker": true,
+      "guard_posts_unchanged": true,
+      "worker_attack_commands": 0
+    },
+    "9_mixed": {
+      "normal_combat_still_engaged": true,
+      "cannon_destroyed": true,
+      "worker_attack_commands": 0
+    },
+    "5": {
+      "in_range_active_worker_shots_retained": 1,
+      "building_completed": true,
+      "safe_wait_observed": true
+    },
+    "6": {
+      "in_range_active_worker_shots_retained": 15,
+      "building_completed": true,
+      "safe_wait_observed": true
+    },
+    "8": {
+      "rally_point_changes_due_to_worker": 0,
+      "waiting": 22,
+      "joining": 2,
+      "note": "Enemy probe is invincible in this route/anchor fixture to sustain the distraction."
+    },
+    "other_keys": {
+      "1": "Probe rescue still reacts to worker threats",
+      "2": "Force mining unchanged",
+      "3_4": "Scope selection unchanged; reserve defenders inherit worker exclusion",
+      "0": "Returns to frozen baseline, relinquishing manual limits"
+    }
+  },
+  "runs": {
+    "7_only_worker": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-162941-390392",
+      "layer_sha256": "65a7368b281d036da23c7bfd260afe9850c5e4cfdd16c54603c558afb460393d",
+      "map_sha256": "b11ce98f253ca1b6298eddf334a79a4e8606301de0549394669597f77a314525",
+      "frames": 1601
+    },
+    "7_mixed": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-162111-821557",
+      "layer_sha256": "fdc711aa1903583a00bc5c5e23e53bcfe6497238b6bac2d6f2c88c73ed45a304",
+      "map_sha256": "8445aba139808115b197ad0f97091998eed90c8e4ed114c111a1bd23ec0a457a",
+      "frames": 3001
+    },
+    "9_worker_at_expansion": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-162948-684517",
+      "layer_sha256": "65a7368b281d036da23c7bfd260afe9850c5e4cfdd16c54603c558afb460393d",
+      "map_sha256": "5acb79bc5555534a815372baa2ea2a361ffd2a2f16e7320b5856020066ea203f",
+      "frames": 2401
+    },
+    "9_mixed": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-162703-273469",
+      "layer_sha256": "65a7368b281d036da23c7bfd260afe9850c5e4cfdd16c54603c558afb460393d",
+      "map_sha256": "9c822b756e6ba243e7f3a929e45234063a51f0edd7d5a7864984399ae68745fa",
+      "frames": 3001
+    },
+    "5_retained_worker_defence": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-162519-841981",
+      "layer_sha256": "02c1dde542d07c00ba61f27d56c6c23ef929b54745219bfc68de485b04bc4926",
+      "map_sha256": "75305680f920b0757367d7d5a976847a7cf88b12d7124d0d0bcf358d2e7000e7",
+      "frames": 2401
+    },
+    "6_retained_worker_defence": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-162527-433782",
+      "layer_sha256": "02c1dde542d07c00ba61f27d56c6c23ef929b54745219bfc68de485b04bc4926",
+      "map_sha256": "75305680f920b0757367d7d5a976847a7cf88b12d7124d0d0bcf358d2e7000e7",
+      "frames": 2401
+    },
+    "8_worker_at_rally": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-162535-219648",
+      "layer_sha256": "02c1dde542d07c00ba61f27d56c6c23ef929b54745219bfc68de485b04bc4926",
+      "map_sha256": "592d0c86266395fb050b7d81cb2dbe4c111e8db8a2882782d58d5cc0bc965ace",
+      "frames": 1801
+    }
+  },
+  "verification": {
+    "cpp_rule_suites": 13,
+    "replay_tests": 31,
+    "hud_max_line_width": 490,
+    "hud_limit": 628
+  },
+  "final_sha256": {
+    "app/CommanderLayer.cpp": "685d8358aefe66b465a189e0610ba442c6e575185a99d2bfc2ce86ffedf81d79",
+    "app/CommanderClear.h": "227138ffa204f3f9d13e3888627515940d7fa1af10daeaef8b6bb0bcc6368349",
+    "app/CommanderHudText.h": "f790ddcfe8ecf3a73966652124af51e0703e28ba4e4c6b871f3c794938fc2d1d",
+    "app/desktop.pyw": "fdf8b2dc6a6eb8a0c70e10f2fd6e06c7df6a10ba3c922a1923c7d2faa533d482",
+    "app/replay_review.py": "6ee9a30ac54124ad5c58de78a69cddfdb78b2e892517ff3bcad32309b5a0c25e",
+    "build/CommanderLayer.dll": "65a7368b281d036da23c7bfd260afe9850c5e4cfdd16c54603c558afb460393d",
+    "baseline/Bot.cpp": "8ef8ae16cf2f0bbc474b8b2b4cbc23ad7239a3ab1a6551c58a397e4a438fca00",
+    "baseline/Baseline.dll": "4528078cda6d98d202559aea4d9fbf6e401c64c15fb2703b6a8de38f1a54e468",
+    "使用说明.md": "b912be2546a87199772ec3f3634f4b31d87de2eae042c57ee68c4336dabee17a",
+    "对局复盘与按键迭代指南.md": "b1d4cfb9b671b5131831f0485f9e57a283274aa9263b04b0966f9c82157207f1"
+  },
+  "notes": [
+    "Some targeted scene recordings precede the final defence-shot renewal fix; 7 and 9 worker-only scenes use the final DLL, and normal mixed defence was retested with it.",
+    "Historical match outcome labels remain preserved. No original maps, opponent binaries or frozen baseline were edited."
+  ]
+}

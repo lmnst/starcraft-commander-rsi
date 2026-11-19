@@ -29,6 +29,9 @@ inline int combatClass(const Candidate& c) {
     return !c.worker && (c.activeThreat || c.nearbyThreat || (c.armed && (c.inRange || c.distance<=focusApproach)))?0:priority(c);
 }
 inline bool reachableFocus(const Candidate& c) { return c.inRange || c.distance<=focusApproach; }
+inline bool directDefence(const Candidate& c) {
+    return (c.activeThreat && (c.inRange || (!c.fleeing && c.distance<=192))) || (!c.worker && c.armed && c.inRange);
+}
 struct Choice {
     int id=-1,tier=99; double score=1e18; bool blockedThreat=false;
     const char* decision="threat_priority";
@@ -97,7 +100,7 @@ public:
         if(releasing && frame>=releaseUntil && (CommanderRules::distance(position,releaseOrigin)>=128 || goalDistance<=112))releasing=false;
     }
     bool needsRelease(int frame,Point position,const Candidate& previous) const {
-        return anchored && !releasing && previous.id==target && !previous.building && !previous.stationary && !previous.inRange &&
+        return anchored && !releasing && previous.id==target && !previous.building && !previous.stationary && !directDefence(previous) &&
             (!previous.valid || previous.distance>acquireRadius || previous.anchorDistance>targetLeash ||
              CommanderRules::distance(position,anchor)>unitLeash || (chaseSince>=0 && frame-chaseSince>=chaseFrames));
     }
@@ -114,10 +117,10 @@ public:
         std::vector<const Candidate*> allowed;
         for(const auto& c:candidates) {
             if(!c.valid || c.distance>acquireRadius)continue;
-            bool directDefense=c.activeThreat && (c.inRange || (!c.fleeing && c.distance<=192));
+            bool directDefense=directDefence(c);
             auto ignore=ignored.find(c.id);
             bool blocked=(ignore!=ignored.end() && frame<ignore->second && !directDefense) ||
-                (releasing && !c.activeThreat) || (!c.building && !c.stationary && !c.inRange &&
+                (releasing && !c.activeThreat && !directDefense) || (!directDefense && !c.building && !c.stationary && !c.inRange &&
                 ((anchored && (CommanderRules::distance(position,anchor)>unitLeash || c.anchorDistance>targetLeash)) ||
                  (chaseSince>=0 && frame-chaseSince>=chaseFrames)));
             if(blocked){if(c.activeThreat)best.blockedThreat=true;continue;}

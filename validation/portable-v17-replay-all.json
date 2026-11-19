@@ -1,0 +1,42 @@
+{
+  "passed": true,
+  "capture": false,
+  "root": "E:\\StarCraft_llmteam\\starcraft-commander-demo\\build\\v17-release-verification\\StarCraft-Commander",
+  "game": "E:\\StarCraftAI\\StarCraft1161",
+  "native_files": {
+    "build/CommanderLayer.dll": "266a6a96b0f792ebad689e93b3610688f2b7b2898e45a05b3fb79da40d84b129",
+    "build/ReplayControl.dll": "e94fd27526f0a510171e8a0b21518961fc4e1cc2fe0a290a1bb3167704cc36bd",
+    "build/WideView.dll": "0c2ac0b047581af20c362290238bc3c693c425af28853d1ff9528b77b4c81e13",
+    "build/CommanderLocalPC.snp": "1f305c4c1d897a1001ab93ff807dd17d84f75d9e46c159e228f96ce71ebe645a",
+    "build/ResultsWatcher.dll": "99b9e904686cd590c32398bea44963501d7b763b2d7f34b0b964e7d51b56483b",
+    "build/LegacyStorm.dll": "09ff5b80b3f122d4d57f9423d983d31212e5485f701d93ecb0fdd453470be4b3",
+    "runtime/engine/injectory.x86.exe": "021f6fe434ed359c00ffbc5e4e9d097be13992ac4ef55698b4b72274a176b04f",
+    "runtime/engine/BWAPI.dll": "f2e0f937e9592157656118fa7e5ff30c2327694ed56c1d8f55687972ad97d308",
+    "runtime/engine/BWAPI-3.7.4.dll": "ef9de2f6557a3ccb108aa206df054a59b4b834f5a85e501bbb0edb9b7c9a5438",
+    "runtime/cnc-ddraw/ddraw.dll": "85e0f7d530dfda134793a57cb3e76b0287dcc96892ee57162dd68f47283b03a9",
+    "vendor/resolution-expander/ResolutionExpander.dll": "05b50dd3e0257219362a8060a51deb916659a25d316119bea20a2b040e232bd7",
+    "runtime/jre/bin/java.exe": "2475b8e4bf51f2f3b49f2281cb3d28bb54d1193a7d407cad0a689f2417e4feb8"
+  },
+  "maps": 3,
+  "opponents": 10,
+  "view": "all",
+  "operations": [
+    {
+      "operation": "pause",
+      "frame": 27
+    },
+    {
+      "operation": "seek_forward",
+      "frame": 600
+    },
+    {
+      "operation": "seek_backward_reload",
+      "frame": 120
+    },
+    {
+      "operation": "resume_at_fast_speed",
+      "frame": 190
+    }
+  ],
+  "playback": "E:\\StarCraft_llmteam\\starcraft-commander-demo\\build\\v17-release-verification\\StarCraft-Commander\\playback\\20261119-134618-903278"
+}

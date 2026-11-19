@@ -1,0 +1,25 @@
+{
+  "replay_engine": "Native StarCraft 1.16.1",
+  "browser_required": false,
+  "mp4_option_removed": true,
+  "native_regression": "validation/native-replay-check.log",
+  "gui_replay_session": "playback/20261110-213201-839012",
+  "gui_forward": {
+    "paused": true,
+    "frame": 9971,
+    "target": 9969
+  },
+  "gui_backward": {
+    "paused": true,
+    "reloaded": true,
+    "frame": 1547,
+    "target": 1545
+  },
+  "gui_end": {
+    "frame": 16648,
+    "total": 16648,
+    "ended": true
+  },
+  "closed_to_launcher": true,
+  "baseline_maps_opponents_hash_verification": "passed"
+}

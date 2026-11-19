@@ -19,11 +19,24 @@ V11_KEYS = {"1":"探机避险", "2":"强制采矿", "3":"小队模式", "4":"全
             "5":"近敌／分矿建筑", "6":"主建筑", "7":"兵和炮台", "8":"安全集结",
             "9":"全军回防", "0":"全局重置"}
 V12_KEYS = dict(V11_KEYS, **{"6":"进攻主基地", "7":"持续区域警戒"})
+V14_KEYS = dict(V12_KEYS, **{"8":"原地集结"})
+V16_KEYS = dict(V14_KEYS, **{"6":"主基地区域清场"})
+V17_KEYS = dict(V16_KEYS, **{"9":"安全撤离集结", "0":"全军回防", "-":"全局重置"})
+
+def reset_key(row):
+    return "-" if row.get("keymap")=="toprow_commands_v17" else "0"
 
 def tenkeys(row):
-    return row.get("keymap") in ("tenkeys_economy_v11", "tenkeys_combat_v12")
+    return row.get("keymap") in ("tenkeys_economy_v11", "tenkeys_combat_v12", "tenkeys_detection_v13", "tenkeys_assembly_v14", "tenkeys_local_combat_v15", "tenkeys_main_area_v16", "toprow_commands_v17")
 
 BATTLE_PHASES = {"patrol_waiting":"持续区域警戒，敌军再现自动接战", "patrol_searching":"敌军丢失视野，短暂局部搜索", "patrol_engaging":"警戒区接战，忽略探机", "active": "执行中", "advancing": "正在推进", "engaging": "正在交战",
+                 "assembly_waiting":"原地等待援兵，集结后继续待命", "assembly_joining":"后方援兵前来汇合",
+                 "assembly_defending":"集结区就近还击，不主动追击", "assembly_evading":"集结区局部避险，保留原集结点",
+                 "evading_cloak":"未侦测隐刀，局部避让并保留原任务", "waiting_detection":"等待反隐支援，到位后自动继续原任务",
+                 "detection_skirmishing":"等待反隐期间，优先处理可安全攻击的敌军", "assembly_shared_refuge":"集结区受压，全队前往同一局部避险点",
+                 "main_outer_pylon":"清主基地：拆外围水晶", "main_outer_building":"清主基地：拆外围建筑", "main_core":"清主基地：拆主建筑",
+                 "main_combat":"清主基地：优先处理敌军和炮台", "main_surveying":"清主基地：扫查区域迷雾", "main_confirming":"清主基地：确认区域已清空",
+                 "main_blocked":"清主基地：已知目标暂不可达，任务保留", "main_advancing":"清主基地：从外围逐步推进",
                  "standby_forming": "清理后向空地分散展开", "standby_waiting": "空地待命，等待下一条指令",
                  "standby_engaging": "待命区附近短距离迎敌", "standby_returning": "停止追击，返回各自站位",
                  "standby_blocked": "安全空位不足，等待展开",
@@ -213,7 +226,7 @@ class ReplayReview:
                 effect = "切换前没有状态采样"
             effect += "；后续已下新指令"
             if any(c.get("action")=="restore_auto" and c["frame"]==end+1 for c in future_commands):
-                effect += "；已由0全部重置，探机交回Bot"
+                effect += f"；已由{reset_key(command)}全部重置，探机交回Bot"
             if evade and any(c.get("action")=="mine_lock" and c.get("status")=="mining_locked" and c["frame"]==end+1 for c in future_commands):
                 effect += "；已由2切回强制采矿"
         return {"frame": start, "title": f"{stamp(start)}  {raw} · {name}  |  {receipt}", "effect": effect}
@@ -223,7 +236,9 @@ class ReplayReview:
         start, key = command["frame"], str(command.get("key", "?"))
         scope = MODE_NAMES.get(command.get("mode"), "未知范围")
         v11 = tenkeys(command)
-        name = (V12_KEYS if command.get("keymap")=="tenkeys_combat_v12" else V11_KEYS if v11 else MODE_KEYS).get(key, "未知动作")
+        name = (V17_KEYS if command.get("keymap")=="toprow_commands_v17" else V16_KEYS if command.get("keymap")=="tenkeys_main_area_v16" else V14_KEYS if command.get("keymap") in ("tenkeys_assembly_v14","tenkeys_local_combat_v15") else V12_KEYS if command.get("keymap") in ("tenkeys_combat_v12", "tenkeys_detection_v13") else V11_KEYS if v11 else MODE_KEYS).get(key, "未知动作")
+        if key=="8" and command.get("keymap") in ("tenkeys_assembly_v14","tenkeys_local_combat_v15","tenkeys_main_area_v16") and command.get("modifier")=="alt":
+            key="Alt+8";name="安全撤离集结"
         if not v11 and key=="7" and command.get("rendezvous_policy")=="shared_safe_point_v1":name="撤退等援兵"
         if not v11 and key=="8" and command.get("global_defence"):name="全军回防"
         result = command.get("status")
@@ -234,19 +249,19 @@ class ReplayReview:
             effect = ("持续接管现有和新造探机的采矿；拦截攻击、追敌和旧侦察指令，保留建造、采气和交资源"
                       if result=="mining_locked" else "未能开启采矿接管，请核对记录")
             if blocked:effect+=f"；已拦截干扰指令 {blocked} 次"
-            if end<frame:effect+="；已由0解除"
+            if end<frame:effect+=f"；已由{reset_key(command)}解除"
             return {"frame":start,"title":f"{stamp(start)}  2 · 强制采矿  |  "+("已开启" if result=="mining_locked" else "未执行"),"effect":effect}
         if command.get("action")=="restore_auto":
             end=next((min(frame,c["frame"]-1) for c in self.commands[index+1:limit] if c["frame"]<=frame),frame)
             events=self.events.between(start,end)
             releases=[e for e in events if e.get("event")=="manual_release" and e["frame"]==start]
             observed={e.get("unit_id") for e in events if e.get("event")=="auto_control" and e.get("released_at")==start and e.get("baseline_untouched")}
-            effect="全部人工任务已取消，作战部队和探机交回Bot；已回到全队模式，按1～9可重新接管"
+            effect="全部人工任务已取消，作战部队和探机交回Bot；已回到全队模式，按1～9"+("、0" if command.get("keymap")=="toprow_commands_v17" else "")+"可重新接管"
             if v11:effect+="；强制采矿锁已解除"
             if observed:effect+=f"；已观察到Bot重新下令 {len(observed)} 个单位"
             if any(not e.get("accepted") or not e.get("verified") for e in releases):effect+="；部分旧命令取消失败，需核对"
             if end<frame:effect+="；后续已重新按键"
-            return {"frame":start,"title":f"{stamp(start)}  0 · "+("全局重置" if v11 else "全部恢复自动作战")+"  |  已重置","effect":effect}
+            return {"frame":start,"title":f"{stamp(start)}  {key} · "+("全局重置" if v11 else "全部恢复自动作战")+"  |  已重置","effect":effect}
         if command.get("action") == "select_mode":
             return {"frame": start, "title": f"{stamp(start)}  {key} · {name}  |  已切换",
                     "effect": f"后续动作控制{scope}；已有任务继续，切换模式本身不派兵"}
@@ -284,9 +299,9 @@ class ReplayReview:
             conflicts=sum(e.get("conflict") is True for e in reserve_events)
             if conflicts:effect+=f"；已拦截冲突指令 {conflicts} 次"
             if any(e.get("accepted") is False or e.get("verified") is False for e in reserve_events):effect+="；存在下令失败，需检查回放"
-            if end<frame and any(c.get("action")=="restore_auto" and c["frame"]==end+1 for c in self.commands[index+1:limit]):effect+="；已由0全部重置，回防任务取消"
+            if end<frame and any(c.get("action")=="restore_auto" and c["frame"]==end+1 for c in self.commands[index+1:limit]):effect+=f"；已由{reset_key(command)}全部重置，回防任务取消"
             return {"frame":start, "title":title+"  |  已分队，其余部队回防", "effect":effect}
-        receipt = {"task_confirmed":"原任务继续，保留交战状态", "applied": "已接收", "waiting_units": "已记录，等待作战单位",
+        receipt = {"patrol_reanchored":"警戒位置已更新，保留有效集火", "task_confirmed":"原任务继续，保留交战状态", "applied": "已接收", "waiting_units": "已记录，等待作战单位",
                    "expansion_unknown": "未执行：尚未发现敌方分矿",
                    "not_enough_healthy_units": "未执行：健康兵力不足",
                    "squad_lost": "未执行：原小队已损失"}.get(result, "接收结果未记录")
@@ -320,7 +335,7 @@ class ReplayReview:
         completed = next((e for e in events if e.get("event") in ("expansion_complete","building_complete")), None)
         if completed or state.get("auto_withdrawal"):
             label = "目标建筑" if v11 else "目标分矿基地"
-            reason = label+"已摧毁" if completed and completed.get("reason")=="depot_destroyed" else "目标原址已确认清空" if completed else "建筑任务已完成" if v11 else "分矿任务已完成"
+            reason = "主基地区域已确认清完" if completed and completed.get("reason")=="main_area_cleared" else label+"已摧毁" if completed and completed.get("reason")=="depot_destroyed" else "目标原址已确认清空" if completed else "建筑任务已完成" if v11 else "分矿任务已完成"
             effect += f"；{reason}，自动安全撤离"
             effect += "，等待下一条指令" if v11 else "，不继续进攻主基地"
         if any(e.get("event")=="clear_complete" for e in events) or state.get("clear_complete"):
@@ -332,7 +347,7 @@ class ReplayReview:
                 if state.get("standby_waiting_space"):effect+=f"；{state['standby_waiting_space']} 名等待安全空位"
             else:
                 effect += "；附近已无可见作战目标，清理结束，安全集结待命，不继续拆基地"
-        if command.get("clear_policy") in ("ignore_workers_v2","persistent_guard_v3") or state.get("clear_policy") in ("ignore_workers_v2","persistent_guard_v3"):
+        if command.get("clear_policy") in ("ignore_workers_v2","persistent_guard_v3","local_guard_v4") or state.get("clear_policy") in ("ignore_workers_v2","persistent_guard_v3","local_guard_v4"):
             effect+="；忽略全部敌方工人，不因探机攻击或逃跑而追逐"
         elif command.get("army_worker_policy")=="ignore_worker_bait_v1":
             effect+="；不因敌方探机调兵、追击或改变安全汇合点"
@@ -346,8 +361,14 @@ class ReplayReview:
                       "；锁定目标分矿；射程内还击攻击者，移动敌人跑出射程就不追，继续原分矿任务"))
         if state.get("raid_policy")=="combat_first_objective_v2" or any(e.get("raid_policy")=="combat_first_objective_v2" for e in order_events):
             effect+="；沿途优先接战真实敌军和炮台，限距追击后恢复原建筑任务；援军先汇合主力"
+        if state.get("raid_policy")=="main_area_outer_first_v1" or any(e.get("raid_policy")=="main_area_outer_first_v1" for e in order_events):
+            effect+="；只清固定主基地区域：敌军炮台优先，外围水晶及建筑逐步推进，主建筑最后；确认区域清完后到共同安全点待命"
+            if state:effect+=f"；已知待清建筑 {state.get('main_known_buildings',0)}，待扫查位置 {state.get('main_unchecked',0)}"
         if state.get("clear_policy")=="persistent_guard_v3" or command.get("clear_policy")=="persistent_guard_v3":
             effect+="；持续警戒，不因暂时无目标而结束；敌军再现自动接战，丢失视野只作短暂局部搜索"
+        if state.get("clear_policy")=="local_guard_v4" or command.get("clear_policy")=="local_guard_v4":
+            effect+="；各部就近警戒，贴身敌军可还击，不受旧区域限制；再次按7更新警戒位置，保留集火；不追探机"
+        if any(e.get("event")=="detection_skirmish" for e in events):effect+="；等待反隐期间仍在安全交战，原任务保留"
         if choices:
             if not locked_raid:effect+="；自动选敌：威胁优先，限制追击"
             latest=next((e for e in reversed(choices) if e.get("selected",-1)>=0),None)
@@ -367,6 +388,10 @@ class ReplayReview:
                 effect+=f"；已到位 {state.get('rally_waiting',0)}、赶来 {state.get('rally_joining',0)}、避险 {state.get('rally_evading',0)}、路线等待 {state.get('rally_blocked',0)}"
                 if state.get('rally_new_units'):effect+=f"；本任务新加入 {state['rally_new_units']} 名新兵"
             if any(e.get('event')=='rendezvous_point' and e.get('reason')=='known_threat' for e in events):effect+="；已因可见威胁调整汇合点"
+        if command.get("assembly_policy")=="fixed_front_wait_v1" or state.get("assembly_policy")=="fixed_front_wait_v1":
+            effect+="；固定前线集结区，前线守位、后方和新兵赶来；忽略探机，只在射程内还击；到齐后等下一条指令"
+        if command.get("assembly_policy")=="shared_local_refuge_v2" or state.get("assembly_policy")=="shared_local_refuge_v2":
+            effect+="；原地等援，受压时使用原集结区附近同一避险点，避免分散；安全后返回原岗位"
         if perimeter:
             effect+="；返程撤离优先；到基地外围保护建筑和工人，限距拦截，敌人离开后收回防线"
         if state.get("multibase_policy")=="proportional_reinforce_v1":
@@ -377,7 +402,7 @@ class ReplayReview:
                 if not base.get("completed",True):label+="（建设中）"
                 parts.append(f"{label}{base.get('assigned',0)}名")
             if parts:effect+="；多基地分守："+"、".join(parts)
-            effect+=f"；受袭按敌情增援，再按{'9' if v11 else '8'}恢复常规比例"
+            effect+=f"；受袭按敌情增援，再按{'0' if command.get('keymap')=='toprow_commands_v17' else '9' if v11 else '8'}恢复常规比例"
             if state.get("defence_reinforced"):effect+="；当前保留增援部署"
         if not perimeter and not rendezvous and (state.get("flight_policy")=="run_first" or any(e.get("flight_policy")=="run_first" for e in order_events)):
             effect+="；撤离优先，贴近时短暂原地还击，不追敌"
@@ -390,7 +415,7 @@ class ReplayReview:
             effect += "；存在下令失败，需检查回放"
         if replaced:
             effect += "；已被新的部队动作替换"
-            if any(c.get("action")=="restore_auto" and c["frame"]==end+1 for c in self.commands[index+1:limit]):effect+="（0全部重置，交回Bot）"
+            if any(c.get("action")=="restore_auto" and c["frame"]==end+1 for c in self.commands[index+1:limit]):effect+=f"（{reset_key(command)}全部重置，交回Bot）"
         return {"frame": start, "title": title, "effect": effect}
 
     @staticmethod
@@ -453,7 +478,8 @@ class ReplayReview:
                         if tenkeys(state):
                             action_label=({"near_enemy":"攻近敌建筑","expansion":"攻分矿建筑","main":"攻主建筑"}.get(latest.get("objective_role"),action_label)
                                           if not latest.get("auto_withdrawal") else "安全集结")
-                            if latest.get("clear_task"):action_label="区域警戒" if latest.get("clear_policy")=="persistent_guard_v3" else "就近待命" if latest.get("clear_complete") else "清兵和炮台"
+                            if latest.get("clear_task"):action_label="区域警戒" if latest.get("clear_policy") in ("persistent_guard_v3","local_guard_v4") else "就近待命" if latest.get("clear_complete") else "清兵和炮台"
+                            if latest.get("assembly_policy") in ("fixed_front_wait_v1","shared_local_refuge_v2"):action_label="原地集结"
                         status.append(label + "：" + action_label + " · "
                                       + BATTLE_PHASES.get(latest.get("phase"), "未知"))
                         if latest.get("auto_withdrawal"):

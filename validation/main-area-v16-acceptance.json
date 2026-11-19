@@ -1,0 +1,106 @@
+{
+  "status": "passed",
+  "layer_sha256": "998f1d2693e1686db1d059fdedf667db47e99f590e9070098bedf5c14e720534",
+  "capture": false,
+  "baseline_untouched": true,
+  "runs": {
+    "outer": {
+      "run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261118-095528-999075",
+      "frame": 7001,
+      "replay": "maps/replays/match.rep"
+    },
+    "combat": {
+      "run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261118-095538-680423",
+      "frame": 7001,
+      "replay": "maps/replays/match.rep"
+    },
+    "early_core": {
+      "run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261118-095545-809425",
+      "frame": 7001,
+      "replay": "maps/replays/match.rep"
+    },
+    "fog": {
+      "run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261118-095553-485201",
+      "frame": 7001,
+      "replay": "maps/replays/match.rep"
+    },
+    "reinforce": {
+      "run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261118-095600-570551",
+      "frame": 7001,
+      "replay": "maps/replays/match.rep"
+    },
+    "compat-late5": {
+      "run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261118-095607-844627",
+      "frame": 2401,
+      "replay": "maps/replays/match.rep"
+    },
+    "compat-late6": {
+      "run": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261118-095616-008845",
+      "frame": 2401,
+      "replay": "maps/replays/match.rep"
+    }
+  },
+  "proofs": {
+    "outer": {
+      "complete_frame": 1088,
+      "all_known_buildings_cleared": 5,
+      "survey_confirmed": true,
+      "safe_rally_waiting": 18,
+      "same_task_on_repeat": true,
+      "outside_buildings_not_attacked": true,
+      "destruction_order": [
+        156,
+        160,
+        156,
+        166,
+        154
+      ],
+      "native_pylon_power_cut": true,
+      "native_key6_and_repeat": true
+    },
+    "combat": {
+      "complete_frame": 1384,
+      "all_known_buildings_cleared": 6,
+      "survey_confirmed": true,
+      "safe_rally_waiting": 16,
+      "same_task_on_repeat": true,
+      "outside_buildings_not_attacked": true,
+      "army_and_cannon_before_ordinary": true,
+      "cannon_destroyed_first": true
+    },
+    "early_core": {
+      "complete_frame": 920,
+      "all_known_buildings_cleared": 5,
+      "survey_confirmed": true,
+      "safe_rally_waiting": 18,
+      "same_task_on_repeat": true,
+      "outside_buildings_not_attacked": true,
+      "core_loss_did_not_end_task": true
+    },
+    "fog": {
+      "complete_frame": 2344,
+      "all_known_buildings_cleared": 5,
+      "survey_confirmed": true,
+      "safe_rally_waiting": 18,
+      "same_task_on_repeat": true,
+      "outside_buildings_not_attacked": true,
+      "fog_contacts_preserved_and_revisited": true
+    },
+    "reinforce": {
+      "complete_frame": 1961,
+      "all_known_buildings_cleared": 5,
+      "survey_confirmed": true,
+      "safe_rally_waiting": 6,
+      "same_task_on_repeat": true,
+      "outside_buildings_not_attacked": true,
+      "dynamic_reinforcements_keep_area_task": true
+    },
+    "compat-late5": {
+      "original_single_target_completion": true
+    },
+    "compat-late6": {
+      "cloak_protection_and_resume": true
+    }
+  },
+  "scope": "Native StarCraft scenario validation; earlier independent Steamhammer.dll crash is not repaired by this change."
+}

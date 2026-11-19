@@ -131,7 +131,7 @@ class Desktop:
                          font=(FONT, 12)).grid(row=1, column=column, sticky="ew", padx=(0, 12))
         mode_row = tk.Frame(area, bg=PANEL)
         mode_row.pack(fill="x", pady=(3, 2))
-        for label, mode in (("十键人工指挥", "human"), ("原始基线自动对战", "baseline")):
+        for label, mode in (("上排按键人工指挥", "human"), ("原始基线自动对战", "baseline")):
             tk.Radiobutton(mode_row, text=label, variable=self.control, value=mode, bg=PANEL, fg=INK,
                            selectcolor="#243246", activebackground=PANEL, activeforeground=INK,
                            font=(FONT, 11), highlightthickness=0).pack(side="left", padx=(0, 14))
@@ -141,9 +141,9 @@ class Desktop:
         tk.Checkbutton(mode_row, text="扩大视野", variable=self.expanded_view,
                        bg=PANEL, fg=INK, selectcolor="#243246", activebackground=PANEL,
                        activeforeground=INK, font=(FONT, 11), highlightthickness=0).pack(side="right", padx=(0, 14))
-        self.label(area, "上排数字键：1 探机避险  2 强制采矿  3 小队模式  4 全队模式", fg=MUTED, size=10).pack(anchor="w", pady=(7, 2))
-        self.label(area, "5 近敌/分矿建筑  6 进攻主基地（沿途先打敌军）  7 持续区域警戒（忽略探机）", fg=MUTED, size=10).pack(anchor="w", pady=(0, 2))
-        self.label(area, "8 安全集结  9 全军回防（不追探机）  0 全局重置（含采矿锁）", fg=MUTED, size=10).pack(anchor="w", pady=(0, 8))
+        self.label(area, "上排按键：1 探机避险  2 强制采矿  3 小队模式  4 全队模式", fg=MUTED, size=10).pack(anchor="w", pady=(7, 2))
+        self.label(area, "5 近敌/分矿建筑  6 从外围清主基地  7 就近警戒（再按更新位置）｜等反隐仍可安全交战", fg=MUTED, size=10).pack(anchor="w", pady=(0, 2))
+        self.label(area, "8 原地等援（受压共同避险）  9 撤离集结  0 全军回防  - 全局重置（含采矿锁）", fg=MUTED, size=10).pack(anchor="w", pady=(0, 8))
         self.label(area, variable=self.pair_notice, fg="#f4c577", size=10).pack(anchor="w")
         bottom = tk.Frame(area, bg=PANEL)
         bottom.pack(fill="x", side="bottom", pady=(0, 5))

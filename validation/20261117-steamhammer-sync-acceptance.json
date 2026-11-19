@@ -1,0 +1,271 @@
+{
+  "passed": true,
+  "date": "2026-11-17",
+  "repair": "ordered_lock_burst_queue_v2",
+  "screen_capture_used": false,
+  "screen_recording_used": false,
+  "engine": "native StarCraft 1.16.1 + BWAPI",
+  "runs": [
+    {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-170131-099471",
+      "opponent": "Steamhammer",
+      "map": "Benzene",
+      "opponent_hosts": false,
+      "mode": "original",
+      "requested_limit": 1200,
+      "frame": 1201,
+      "natural_end": false,
+      "winner": false,
+      "layer_sha256": "3f3d1ab5d2776f98d456584f0866bdcef14fce39a0bbf09c967540b10400b115",
+      "transport_sha256": "d8112c91fa80e1cd0b43d0126767dff832f5e6c400e38fa74d23e613c93c47d9",
+      "sides": {
+        "host": {
+          "end_frame": 1201,
+          "winner": false,
+          "sent": 2069,
+          "received": 2068,
+          "queue_full_events": 0,
+          "queue_peak": 23,
+          "max_sampled_ai_progress_gap_ms": 4625,
+          "mineral_income": 232,
+          "gas_income": 0,
+          "peak_army": 0,
+          "army_losses_observed": false
+        },
+        "opponent": {
+          "end_frame": 1211,
+          "winner": true,
+          "sent": 2068,
+          "received": 2072,
+          "queue_full_events": 0,
+          "queue_peak": 17,
+          "max_sampled_ai_progress_gap_ms": 4625,
+          "mineral_income": 248,
+          "gas_income": 0,
+          "peak_army": 0,
+          "army_losses_observed": false
+        }
+      }
+    },
+    {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-170529-887034",
+      "opponent": "Steamhammer",
+      "map": "Benzene",
+      "opponent_hosts": false,
+      "mode": "data",
+      "requested_limit": 18000,
+      "frame": 14107,
+      "natural_end": true,
+      "winner": false,
+      "layer_sha256": "bea4e6bcb18beb47e7444275c663ceeca55d176f797e14c36600d0b3bb44a8f5",
+      "transport_sha256": "d8112c91fa80e1cd0b43d0126767dff832f5e6c400e38fa74d23e613c93c47d9",
+      "sides": {
+        "host": {
+          "end_frame": 14107,
+          "winner": false,
+          "sent": 22913,
+          "received": 22668,
+          "queue_full_events": 0,
+          "queue_peak": 14,
+          "max_sampled_ai_progress_gap_ms": 6094,
+          "mineral_income": 6312,
+          "gas_income": 968,
+          "peak_army": 9,
+          "army_losses_observed": true
+        },
+        "opponent": {
+          "end_frame": 14138,
+          "winner": true,
+          "sent": 22665,
+          "received": 22913,
+          "queue_full_events": 0,
+          "queue_peak": 13,
+          "max_sampled_ai_progress_gap_ms": 6125,
+          "mineral_income": 10920,
+          "gas_income": 2400,
+          "peak_army": 21,
+          "army_losses_observed": true
+        }
+      }
+    },
+    {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-171445-303771",
+      "opponent": "Steamhammer",
+      "map": "Benzene",
+      "opponent_hosts": false,
+      "mode": "original",
+      "requested_limit": 360,
+      "frame": 361,
+      "natural_end": false,
+      "winner": false,
+      "layer_sha256": "1503790f6e239cc54081646f97d1f9b49482dbdfc95358ebcbeb665415b94ae0",
+      "transport_sha256": "2eefc060a0a4bced2ede2dc53866374b5caa92f878647d87c30aa239d9d00dbb",
+      "sides": {
+        "host": {
+          "end_frame": 361,
+          "winner": false,
+          "sent": 491,
+          "received": 488,
+          "queue_full_events": 0,
+          "queue_peak": 8,
+          "max_sampled_ai_progress_gap_ms": 750,
+          "mineral_income": 32,
+          "gas_income": 0,
+          "peak_army": 0,
+          "army_losses_observed": false
+        },
+        "opponent": {
+          "end_frame": 374,
+          "winner": true,
+          "sent": 490,
+          "received": 494,
+          "queue_full_events": 0,
+          "queue_peak": 7,
+          "max_sampled_ai_progress_gap_ms": 5031,
+          "mineral_income": 64,
+          "gas_income": 0,
+          "peak_army": 0,
+          "army_losses_observed": false
+        }
+      }
+    },
+    {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-171523-365903",
+      "opponent": "Steamhammer",
+      "map": "Benzene",
+      "opponent_hosts": true,
+      "mode": "opponent_host",
+      "requested_limit": 360,
+      "frame": 361,
+      "natural_end": false,
+      "winner": false,
+      "layer_sha256": "1503790f6e239cc54081646f97d1f9b49482dbdfc95358ebcbeb665415b94ae0",
+      "transport_sha256": "2eefc060a0a4bced2ede2dc53866374b5caa92f878647d87c30aa239d9d00dbb",
+      "sides": {
+        "host": {
+          "end_frame": 361,
+          "winner": false,
+          "sent": 644,
+          "received": 669,
+          "queue_full_events": 0,
+          "queue_peak": 22,
+          "max_sampled_ai_progress_gap_ms": 78,
+          "mineral_income": 32,
+          "gas_income": 0,
+          "peak_army": 0,
+          "army_losses_observed": false
+        },
+        "opponent": {
+          "end_frame": 374,
+          "winner": true,
+          "sent": 655,
+          "received": 644,
+          "queue_full_events": 0,
+          "queue_peak": 6,
+          "max_sampled_ai_progress_gap_ms": 1875,
+          "mineral_income": 64,
+          "gas_income": 0,
+          "peak_army": 0,
+          "army_losses_observed": false
+        }
+      }
+    },
+    {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-171549-287807",
+      "opponent": "PylonPuller",
+      "map": "Destination",
+      "opponent_hosts": false,
+      "mode": "original",
+      "requested_limit": 360,
+      "frame": 361,
+      "natural_end": false,
+      "winner": false,
+      "layer_sha256": "1503790f6e239cc54081646f97d1f9b49482dbdfc95358ebcbeb665415b94ae0",
+      "transport_sha256": "2eefc060a0a4bced2ede2dc53866374b5caa92f878647d87c30aa239d9d00dbb",
+      "sides": {
+        "host": {
+          "end_frame": 361,
+          "winner": false,
+          "sent": 678,
+          "received": 688,
+          "queue_full_events": 0,
+          "queue_peak": 23,
+          "max_sampled_ai_progress_gap_ms": 328,
+          "mineral_income": 32,
+          "gas_income": 0,
+          "peak_army": 0,
+          "army_losses_observed": false
+        },
+        "opponent": {
+          "end_frame": 374,
+          "winner": true,
+          "sent": 683,
+          "received": 678,
+          "queue_full_events": 0,
+          "queue_peak": 12,
+          "max_sampled_ai_progress_gap_ms": 4359,
+          "mineral_income": 56,
+          "gas_income": 0,
+          "peak_army": 0,
+          "army_losses_observed": false
+        }
+      }
+    }
+  ],
+  "original_user_failure": {
+    "path": "E:\\StarCraft_llmteam\\commander_desktop\\matches\\20261117-164306-827751",
+    "map": "Benzene",
+    "opponent": "Steamhammer",
+    "frame": 33,
+    "state": "error"
+  },
+  "pre_fix_native_reproduction": {
+    "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-165611-228974",
+    "error": [
+      "等待双方进入对局超时。详情见对局目录。"
+    ],
+    "ai_callbacks_not_entered": true,
+    "transport": {
+      "host": {
+        "full_events": 378,
+        "peak_queue": 16
+      },
+      "opponent": {
+        "full_events": 401,
+        "peak_queue": 16
+      }
+    }
+  },
+  "actual_spi_regression": {
+    "before": "deadlock reproduced using original SNPModule object",
+    "after": "forced contention and 10000-packet concurrent FIFO both passed",
+    "before_log": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\snp-lock-before.txt",
+    "after_log": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\snp-lock-after.txt"
+  },
+  "final_hashes": {
+    "app/LocalQueue.h": "a8be1f3074c3b14ad5891e89a9439891ae3a9867ae6c31c65a1fa164a555ec5c",
+    "vendor/local-pc-transport/SNP/LocalPC.cpp": "6b780618d5e4ce58fb427db6ff5e9d078f40b8277da8a37765414d5accad3a4a",
+    "vendor/local-pc-transport/SNP/SNPModule.cpp": "16514a5fd0e93df5254082f5e57d8124821e090b5a4a3976dcbb5636a5e4a373",
+    "app/CommanderLayer.cpp": "81f06eeccb33f0de91d47e298eef355bc4f596acea9b13c252850f3dffeca920",
+    "app/matches.py": "06d2da91036465be23264bd9155b7ce46c3c6bd3c010bd9237db474fc35b9e59",
+    "build/CommanderLocalPC.snp": "2eefc060a0a4bced2ede2dc53866374b5caa92f878647d87c30aa239d9d00dbb",
+    "build/CommanderLayer.dll": "1503790f6e239cc54081646f97d1f9b49482dbdfc95358ebcbeb665415b94ae0",
+    "baseline/Bot.cpp": "8ef8ae16cf2f0bbc474b8b2b4cbc23ad7239a3ab1a6551c58a397e4a438fca00",
+    "baseline/Baseline.dll": "4528078cda6d98d202559aea4d9fbf6e401c64c15fb2703b6a8de38f1a54e468",
+    "opponents/Steamhammer/bwapi-data/AI/Steamhammer.dll": "a45481cfe3225bdc0df4db47d946f62ef1df24c50b780e4344cd8a664181cdde",
+    "使用说明.md": "96d263d0470895aad91460add740981715af812b993c4fa02e8398befa8734b9"
+  },
+  "preserved_assets_verified": {
+    "baseline_source": true,
+    "baseline_dll": true,
+    "original_maps": true,
+    "opponent_binaries": true
+  },
+  "notes": [
+    "The original 33-frame formal game had no callback/thread diagnostics; its exact blocked thread cannot be reconstructed after exit.",
+    "Transport defects were reproduced independently of Steamhammer AI execution, and fixed without replacing the opponent DLL.",
+    "The long game ended naturally before its 18000-frame test limit. Short startup checks stop intentionally at their requested limits.",
+    "The final logging-default-only revision was then checked in both lobby roles and against PylonPuller; lock ordering and queue behavior match the long-game build.",
+    "No screenshots, screen recordings, screen sharing or WindowRecorder capture process were used. Native .rep files contain game replay data."
+  ]
+}

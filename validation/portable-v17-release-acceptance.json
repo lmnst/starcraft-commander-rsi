@@ -1,0 +1,66 @@
+{
+  "passed": true,
+  "version": "v17-20261119",
+  "archive": "StarCraft-Commander-v17-Windows-x64.zip",
+  "bytes": 85791373,
+  "sha256": "94e5d95c89e319472c7c5343663e12e8b27bad10df40b8bdc2255a50367ee9e5",
+  "game_included": false,
+  "media_included": false,
+  "capture": false,
+  "checks": {
+    "selfcheck": {
+      "passed": true,
+      "operations": []
+    },
+    "replay-all": {
+      "passed": true,
+      "operations": [
+        {
+          "operation": "pause",
+          "frame": 27
+        },
+        {
+          "operation": "seek_forward",
+          "frame": 600
+        },
+        {
+          "operation": "seek_backward_reload",
+          "frame": 120
+        },
+        {
+          "operation": "resume_at_fast_speed",
+          "frame": 190
+        }
+      ]
+    },
+    "replay-self": {
+      "passed": true,
+      "operations": [
+        {
+          "operation": "pause",
+          "frame": 27
+        },
+        {
+          "operation": "seek_forward",
+          "frame": 600
+        },
+        {
+          "operation": "seek_backward_reload",
+          "frame": 120
+        },
+        {
+          "operation": "resume_at_fast_speed",
+          "frame": 190
+        }
+      ]
+    },
+    "native-battle": {
+      "passed": true,
+      "opponent": "PylonPuller",
+      "frames": 3601,
+      "max_workers": 14,
+      "gathered_minerals": 1202,
+      "ended_at_test_cap": true
+    }
+  }
+}

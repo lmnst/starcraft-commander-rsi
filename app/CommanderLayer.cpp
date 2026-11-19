@@ -13,11 +13,14 @@
 #include "CommanderFlight.h"
 #include "CommanderTargeting.h"
 #include "CommanderRaid.h"
+#include "CommanderMainArea.h"
 #include "CommanderClear.h"
+#include "CommanderDetection.h"
 #include "CommanderStandby.h"
 #include "CommanderDefence.h"
 #include "CommanderBases.h"
 #include "CommanderRendezvous.h"
+#include "CommanderAssembly.h"
 #include "CommanderHudText.h"
 #include "CommanderHudRaster.h"
 #include <algorithm>
@@ -40,7 +43,7 @@ namespace Standby = CommanderStandby;
 namespace MultiBase = CommanderBases;
 static Game* game = nullptr;
 static std::vector<int> keys;
-static bool commandHeld[10] = {};
+static bool commandHeld[11] = {};
 static ULONGLONG lastInput = 0;
 static LPARAM mousePoint = -1;
 
@@ -48,22 +51,23 @@ static LRESULT CALLBACK input(int code, WPARAM removal, LPARAM data) {
     if (code == HC_ACTION && removal == PM_REMOVE) {
         MSG& m = *reinterpret_cast<MSG*>(data);
         if ((m.message == WM_MOUSEMOVE && m.lParam != mousePoint) ||
-            (m.message >= WM_LBUTTONDOWN && m.message <= WM_MOUSEHWHEEL) || m.message == WM_KEYDOWN)
+            (m.message >= WM_LBUTTONDOWN && m.message <= WM_MOUSEHWHEEL) || m.message == WM_KEYDOWN || m.message==WM_SYSKEYDOWN)
             lastInput = GetTickCount64();
         if (m.message == WM_MOUSEMOVE) mousePoint = m.lParam;
-        if ((m.message == WM_KEYDOWN || m.message == WM_KEYUP) && m.wParam >= '0' && m.wParam <= '9') {
-            bool& held = commandHeld[m.wParam - '0'];
-            const bool plain = !(GetKeyState(VK_CONTROL) & 0x8000) &&
-                               !(GetKeyState(VK_SHIFT) & 0x8000) && !(GetKeyState(VK_MENU) & 0x8000);
-            const bool down = m.message == WM_KEYDOWN;
-            if (down && plain && !(m.lParam & (1L << 30))) {
-                keys.push_back(int(m.wParam));
+        int heldIndex=CommanderKeys::heldIndex(int(m.wParam));
+        if ((m.message == WM_KEYDOWN || m.message == WM_KEYUP || m.message==WM_SYSKEYDOWN || m.message==WM_SYSKEYUP) && heldIndex>=0) {
+            bool& held = commandHeld[heldIndex];
+            int shortcut=CommanderKeys::shortcut(int(m.wParam),GetKeyState(VK_CONTROL)&0x8000,
+                GetKeyState(VK_SHIFT)&0x8000,(GetKeyState(VK_MENU)&0x8000) || (m.lParam&(1L<<29)));
+            const bool down = m.message == WM_KEYDOWN || m.message==WM_SYSKEYDOWN;
+            if (down && shortcut && !held && !(m.lParam & (1L << 30))) {
+                keys.push_back(shortcut);
                 held = true;
             }
-            // Plain top-row digits own these shortcuts in human mode. Consume
-            // repeats and the matching release; modified digits stay native.
+            // Plain top-row digits and OEM minus own human shortcuts. Consume
+            // repeats and matching releases; modified keys stay native.
             // Numpad digits and all function keys are outside this range.
-            if (held || (down && plain)) {
+            if (held || (down && shortcut)) {
                 if (!down) held = false;
                 m.message = WM_NULL; m.wParam = 0; m.lParam = 0;
             }
@@ -111,12 +115,22 @@ class CommanderLayer final : public AIModule {
         std::string rallyRole,rallyStage;
         double rallyRisk=0,rallyPeak=0,rallyPathAdvance=0;
         int rallySlot=-1;
+        CommanderAssembly::Progress assemblyProgress;
     };
+    struct CloakPause {
+        int enemy=-1,lastSeen=-10000,lastPlan=-10000,safeTarget=-1;
+        Position threat=Positions::None,goal=Positions::None;
+        bool evading=false;
+    };
+    struct Escort {int task=0;Position goal=Positions::None;};
+    std::map<int,Escort> escorts;
+    std::set<int> destroyedEnemies;
     struct BattleTask {
         int id=0,key=0,lastPlan=-1000,clearSince=-1;
         Plans::Scope scope=Plans::Scope::All;
         Plans::Action action=Plans::Action::Gather;
         Position goal=Positions::None;
+        std::map<int,CloakPause> cloakPauses;
         std::map<int,Position> escapes;
         std::map<int,FlightUnit> flight;
         std::map<int,Targeting::Engagement> targeting;
@@ -128,6 +142,13 @@ class CommanderLayer final : public AIModule {
         Position raidGoal=Positions::None;
         TilePosition raidTile=TilePositions::None;
         UnitType raidType=UnitTypes::None;
+        bool mainArea=false;
+        int mainTarget=-1,mainEmptySince=-1,mainUnchecked=0,mainPlanFrame=-1000;
+        std::string mainStage="main_advancing";
+        std::map<int,Memory> mainKnown;
+        std::vector<Rules::Point> mainOtherBases;
+        std::vector<Position> mainSurvey;
+        std::vector<bool> mainChecked;
         std::set<int> assaultMembers,assaultJoining;
         Position assaultJoinPoint=Positions::None;
         bool clearTask=false;
@@ -141,6 +162,11 @@ class CommanderLayer final : public AIModule {
         Position guardPost=Positions::None;
         int guardVictim=-1,lastGuardPlan=-1000;
         bool rendezvous=false;
+        bool stationary=false;
+        Position assemblyOrigin=Positions::None;
+        Position assemblyRefuge=Positions::None;
+        int assemblyRefugePlan=-10000,assemblySafeSince=-1;
+        std::map<int,Position> assemblyPosts;
         Position rallyFront=Positions::None;
         std::set<int> rallyInitial,rallyFrontIds;
         int rallySerial=0;
@@ -157,6 +183,8 @@ class CommanderLayer final : public AIModule {
     std::set<int> autoObserved;
     CommanderHud::Raster hud;
     int hudLastKey=0,hudCommandUnits=0,hudReserves=0;
+    bool hudLastSafeRally=false;
+    char hudPhysicalKey=0;
     Plans::Scope hudLastMode=Plans::Scope::All;
     std::ofstream log;
     std::ofstream diagnosticLog;
@@ -274,7 +302,10 @@ class CommanderLayer final : public AIModule {
             if (u->getType().isResourceDepot()) bases.push_back(u);
             if (!u->getType().isWorker() && !u->getType().isBuilding() && armed(u)) army.push_back(u);
         }
-        for (auto player : game->enemies()) for (auto u : player->getUnits()) if (live(u) && u->isVisible()) {
+        // HP is intentionally unavailable (zero) for an undetected cloaked
+        // enemy. Do not mistake that partial visibility for a dead unit.
+        for (auto player : game->enemies()) for (auto u : player->getUnits()) if (u &&
+            CommanderDetection::observable(u->exists(),u->isVisible(),u->isDetected(),u->getHitPoints())) {
             foes.push_back(u);
             if (u->getType().isBuilding()) remembered[u->getID()]={u->getPosition(),u->getType(),u->getTilePosition()};
         }
@@ -717,6 +748,19 @@ class CommanderLayer final : public AIModule {
         for(auto u:units)if(u->getDistance(best)<384)forward.push_back(u);
         return groupCenter(forward);
     }
+    Position assemblyFront(const std::vector<Unit>& units) const {
+        if(units.empty())return Positions::None;
+        Unit best=nullptr;double score=-1e18;
+        for(auto u:units) {
+            int count=int(std::count_if(units.begin(),units.end(),[&](Unit v){return u->getDistance(v)<384;}));
+            if(units.size()>1 && count<2)continue;
+            double value=Rally::progress(point(home),point(enemyStart),point(u->getPosition()))+count*32;
+            if(value>score){best=u;score=value;}
+        }
+        if(!best)return groupCenter(units);
+        std::vector<Unit> front;for(auto u:units)if(u->getDistance(best)<384)front.push_back(u);
+        return groupCenter(front);
+    }
     Position selectRally(const BattleTask& task,const std::vector<Unit>& units,const std::vector<Rally::Hazard>& hazards,bool relocate) const {
         Position origin=relocate?task.goal:task.rallyFront;
         Position preferred=toward(origin,home,std::min(relocate?256.0:384.0,origin.getDistance(home)));
@@ -830,6 +874,207 @@ class CommanderLayer final : public AIModule {
         // movement. No attack-move or pursuing attack-unit command is issued.
         if(f.rallyRisk>Rally::epsilon && briefFlightFire(u,task))f.hold=true;
     }
+    void prepareAssembly(BattleTask& task,const std::vector<Unit>& units) {
+        if(!task.assemblyOrigin.isValid()) {
+            task.assemblyOrigin=groupCenter(units);task.goal=task.assemblyOrigin;
+            for(auto u:units)task.rallyInitial.insert(u->getID());
+            log<<"{\"event\":\"assembly_point\",\"frame\":"<<frame<<",\"task_id\":"<<task.id
+               <<",\"origin\":["<<task.goal.x<<","<<task.goal.y<<"],\"policy\":\"shared_local_refuge_v2\"}"<<std::endl;
+        }
+        auto world=standbyWorld();
+        for(auto it=task.assemblyPosts.begin();it!=task.assemblyPosts.end();) {
+            auto member=std::find_if(units.begin(),units.end(),[&](Unit u){return u->getID()==it->first;});
+            if(member==units.end() || !standbyOpen(it->second,{*member},world,16))it=task.assemblyPosts.erase(it);
+            else ++it;
+        }
+        auto ranked=units;
+        std::stable_sort(ranked.begin(),ranked.end(),[&](Unit a,Unit b){
+            auto front=[&](Unit u){return task.rallyInitial.count(u->getID()) && CommanderAssembly::preservePost(u->getDistance(task.assemblyOrigin));};
+            return front(a)>front(b);
+        });
+        // Reserve all unchanged front posts before placing any arrivals.
+        for(auto u:ranked)if(!task.assemblyPosts.count(u->getID())) {
+            Position post=u->getPosition();bool frontline=task.rallyInitial.count(u->getID()) &&
+                CommanderAssembly::preservePost(u->getDistance(task.assemblyOrigin));
+            if(!frontline || !standbyOpen(post,{u},world,16)) {
+                double best=1e18;Position chosen=Positions::None;
+                for(int radius:{0,48,96,144,192})for(int i=0;i<(radius?16:1);++i) {
+                    double angle=i*3.141592653589793/8;
+                    Position p=clamp(task.assemblyOrigin+Position(int(std::cos(angle)*radius),int(std::sin(angle)*radius)));
+                    if(!standbyOpen(p,{u},world,20))continue;
+                    bool occupied=std::any_of(task.assemblyPosts.begin(),task.assemblyPosts.end(),[&](const auto& e){
+                        return ours(e.first) && e.second.getDistance(p)<48;
+                    });
+                    if(occupied)continue;
+                    double score=p.getDistance(task.assemblyOrigin)+p.getDistance(u->getPosition())*.05;
+                    if(score<best){best=score;chosen=p;}
+                }
+                // No usable post: wait for space instead of moving the anchor
+                // or sending the unit into a building/mineral footprint.
+                if(!chosen.isValid())continue;
+                post=chosen;
+            }
+            task.assemblyPosts[u->getID()]=post;
+            auto& f=task.flight[u->getID()];
+            f.rallyRole=frontline?"frontline":task.rallyInitial.count(u->getID())?"reinforcement":"new_unit";
+            log<<"{\"event\":\"assembly_join\",\"frame\":"<<frame<<",\"task_id\":"<<task.id<<",\"unit_id\":"<<u->getID()
+               <<",\"role\":\""<<f.rallyRole<<"\",\"position\":["<<u->getPosition().x<<","<<u->getPosition().y
+               <<"],\"post\":["<<post.x<<","<<post.y<<"]}"<<std::endl;
+        }
+    }
+    Unit assemblyEnemy(Unit u,const BattleTask& task) const {
+        Position area=task.assemblyRefuge.isValid()?task.assemblyRefuge:task.assemblyOrigin;
+        if(u->getDistance(area)>CommanderAssembly::fieldRadius)return nullptr;
+        Unit result=nullptr;double best=1e18;
+        for(auto e:foes)if(live(e) && e->isVisible() && u->canAttack(e) &&
+            CommanderAssembly::returnFire(e->getType().isWorker(),e->isDetected(),combatEnemy(e) ||
+                (e->getType().isBuilding() && armed(e)),u->isInWeaponRange(e))) {
+            double score=u->getDistance(e)+health(e)*32;
+            if(score<best){best=score;result=e;}
+        }
+        return result;
+    }
+    std::vector<Rally::Hazard> assemblyHazards(const BattleTask& task) const {
+        auto hazards=rallyHazards();
+        for(auto e:foes)if(e->exists() && e->isVisible() && !e->isDetected() && !e->getType().isWorker() && e->getType().groundWeapon()!=WeaponTypes::None)
+            hazards.push_back({point(e->getPosition()),320,4});
+        for(const auto& p:task.cloakPauses)if(frame-p.second.lastSeen<=240)
+            hazards.push_back({point(p.second.threat),320,2});
+        return hazards;
+    }
+    void planAssemblyRefuge(BattleTask& task,const std::vector<Unit>& units,const std::vector<Rally::Hazard>& hazards) {
+        bool pressure=false;
+        for(auto u:units)if(u->getDistance(task.assemblyOrigin)<=384) {
+            Unit pursuer=closeThreat(u,448);bool outranged=false;
+            if(pursuer) {
+                auto weapon=u->isFlying()?pursuer->getType().airWeapon():pursuer->getType().groundWeapon();
+                outranged=weapon!=WeaponTypes::None && !u->isInWeaponRange(pursuer) && u->getDistance(pursuer)<=pursuer->getPlayer()->weaponMaxRange(weapon)+64;
+            }
+            bool hidden=std::any_of(foes.begin(),foes.end(),[&](Unit e){return e->exists() && e->isVisible() && !e->isDetected() &&
+                !e->getType().isWorker() && e->getType().groundWeapon()!=WeaponTypes::None && e->getDistance(u)<320;});
+            pressure|=hidden || (!(assemblyEnemy(u,task) && health(u)>=.4) && CommanderAssembly::localEscape(Rally::exposure(point(u->getPosition()),hazards),u->isUnderAttack(),health(u)<.35,outranged));
+        }
+        bool originSafe=Rally::exposure(point(task.assemblyOrigin),hazards)<=Rally::epsilon;
+        if(!pressure && originSafe) {
+            if(task.assemblySafeSince<0)task.assemblySafeSince=frame;
+            if(task.assemblyRefuge.isValid() && frame-task.assemblySafeSince>=120) {
+                task.assemblyRefuge=Positions::None;
+                log<<"{\"event\":\"assembly_refuge\",\"frame\":"<<frame<<",\"task_id\":"<<task.id<<",\"state\":\"returning_posts\"}"<<std::endl;
+            }
+            return;
+        }
+        task.assemblySafeSince=-1;
+        if(!pressure && !task.assemblyRefuge.isValid())return;
+        if(task.assemblyRefuge.isValid() && Rally::exposure(point(task.assemblyRefuge),hazards)<=Rally::epsilon)return;
+        if(frame-task.assemblyRefugePlan<48)return;
+        task.assemblyRefugePlan=frame;Position best=task.assemblyOrigin;double score=1e18;
+        Position front=groupCenter(units);
+        for(int radius:{0,96,192,288,384})for(int i=0;i<(radius?24:1);++i) {
+            double angle=i*3.141592653589793/12;
+            Position p=clamp(task.assemblyOrigin+Position(int(std::cos(angle)*radius),int(std::sin(angle)*radius)));
+            if(!rallyOpen(p,units))continue;
+            double value=Rally::exposure(point(p),hazards)*10000+Rally::peak(point(front),point(p),hazards)*32+
+                p.getDistance(task.assemblyOrigin)+p.getDistance(front)*.2;
+            if(task.assemblyRefuge.isValid())value+=p.getDistance(task.assemblyRefuge)*.1;
+            if(value<score){score=value;best=p;}
+        }
+        bool changed=!task.assemblyRefuge.isValid() || task.assemblyRefuge.getDistance(best)>24;
+        task.assemblyRefuge=best;
+        if(changed)log<<"{\"event\":\"assembly_refuge\",\"frame\":"<<frame<<",\"task_id\":"<<task.id
+            <<",\"state\":\"shared_local_refuge\",\"origin\":["<<task.assemblyOrigin.x<<","<<task.assemblyOrigin.y
+            <<"],\"goal\":["<<best.x<<","<<best.y<<"],\"radius\":384}"<<std::endl;
+    }
+    Rally::Choice assemblyStep(Unit u,const BattleTask& task,Position post,const std::vector<Rally::Hazard>& hazards) const {
+        Position from=u->getPosition(),waypoint=rallyWaypoint(u,post);
+        std::vector<Rally::Candidate> candidates;double before=rallyPathDistance(from,post,u->isFlying());
+        auto add=[&](Position p) {
+            p=clamp(p);bool advancing=before-rallyPathDistance(p,post,u->isFlying())>16;
+            bool open=rallyOpen(p,{u}) && CommanderAssembly::boundedStep(from.getDistance(task.assemblyOrigin),p.getDistance(task.assemblyOrigin),advancing);
+            if(open && !u->isFlying())for(int i=1,n=std::max(1,int(from.getDistance(p)/24));i<=n && open;++i)
+                open=game->isWalkable(WalkPosition(from+Position((p.x-from.x)*i/n,(p.y-from.y)*i/n)));
+            candidates.push_back({point(p),open,advancing});
+        };
+        add(waypoint);if(from.getDistance(post)<384)add(post);
+        for(int radius:{64,128,192})for(int i=0;i<16;++i) {
+            double a=i*3.141592653589793/8;add(from+Position(int(std::cos(a)*radius),int(std::sin(a)*radius)));
+        }
+        return Rally::choose(point(from),point(waypoint),point(post),point(from),false,true,hazards,candidates);
+    }
+    void controlAssembly(BattleTask& task,const std::vector<Unit>& units) {
+        prepareAssembly(task,units);
+        auto hazards=assemblyHazards(task);planAssemblyRefuge(task,units,hazards);
+        int arrived=0,engaged=0,evading=0,protectedCount=0,skirmishing=0;
+        auto previousPhase=task.phase;
+        for(auto u:units) {
+            auto& f=task.flight[u->getID()];
+            if(cloakProtection(u,task)){++protectedCount;evading+=task.cloakPauses.at(u->getID()).evading;skirmishing+=task.cloakPauses.at(u->getID()).safeTarget>=0;continue;}
+            auto found=task.assemblyPosts.find(u->getID());
+            Position from=u->getPosition(),post=found==task.assemblyPosts.end()?from:found->second;
+            if(task.assemblyRefuge.isValid()) {
+                Position spread=task.assemblyRefuge+Position((u->getID()%3-1)*32,(u->getID()/3%3-1)*32);
+                post=spread.getDistance(task.assemblyOrigin)<=CommanderAssembly::refugeRadius && rallyOpen(spread,{u})?spread:task.assemblyRefuge;
+            }
+            Unit target=assemblyEnemy(u,task),pursuer=closeThreat(u,448);
+            f.rallyRisk=Rally::exposure(point(from),hazards);f.resting=false;f.nearby=pursuer?pursuer->getID():-1;
+            bool outranged=false;
+            if(pursuer) {
+                auto weapon=u->isFlying()?pursuer->getType().airWeapon():pursuer->getType().groundWeapon();
+                outranged=weapon!=WeaponTypes::None && !u->isInWeaponRange(pursuer) &&
+                    u->getDistance(pursuer)<=pursuer->getPlayer()->weaponMaxRange(weapon)+64;
+            }
+            bool escape=CommanderAssembly::localEscape(f.rallyRisk,u->isUnderAttack(),health(u)<.35,outranged);
+            if(!escape && !task.assemblyRefuge.isValid() && f.assemblyProgress.stalled(frame,point(from),point(post))) {
+                Position chosen=post;double best=1e18;auto world=standbyWorld();
+                for(int radius:{0,48,96,144,192})for(int i=0;i<(radius?16:1);++i) {
+                    double a=i*3.141592653589793/8;
+                    Position p=clamp(post+Position(int(std::cos(a)*radius),int(std::sin(a)*radius)));
+                    if(p.getDistance(task.assemblyOrigin)>CommanderAssembly::fieldRadius || !standbyOpen(p,{u},world,24) ||
+                       Rally::exposure(point(p),hazards)>Rally::epsilon)continue;
+                    bool occupied=std::any_of(units.begin(),units.end(),[&](Unit v){return v!=u &&
+                        v->getDistance(p)<u->getType().width()/2+16;});
+                    if(occupied)continue;
+                    double value=p.getDistance(post)+p.getDistance(from)*.2;
+                    if(value<best){best=value;chosen=p;}
+                }
+                if(chosen!=post) {
+                    log<<"{\"event\":\"assembly_post_adjusted\",\"frame\":"<<frame<<",\"task_id\":"<<task.id
+                       <<",\"unit_id\":"<<u->getID()<<",\"previous\":["<<post.x<<","<<post.y<<"],\"post\":["<<chosen.x<<","<<chosen.y
+                       <<"],\"reason\":\"friendly_blockage\"}"<<std::endl;
+                    task.assemblyPosts[u->getID()]=chosen;post=chosen;f.assemblyProgress.since=-1;
+                }
+            }
+            if(target && health(u)>=.4) {
+                f.moveGoal=from;f.hold=false;f.rallyStage="defending";++engaged;
+            } else if(!escape && (found==task.assemblyPosts.end() || from.getDistance(post)<=CommanderAssembly::arrival)) {
+                target=nullptr;f.moveGoal=from;f.hold=true;f.resting=true;f.rallyStage=found==task.assemblyPosts.end()?"route_wait":"waiting";++arrived;
+            } else {
+                target=nullptr;
+                auto choice=assemblyStep(u,task,post,hazards);
+                f.moveGoal=Position(int(choice.position.x),int(choice.position.y));f.hold=!choice.moving;f.rallyPeak=choice.routePeak;
+                f.rallyStage=escape?"evading":f.hold?"route_wait":"joining";
+                if(escape)++evading;
+            }
+            battleOrder(u,task,f.moveGoal,target,false,f.hold);
+            if(frame%120==0) {
+                log<<"{\"event\":\"assembly_sample\",\"frame\":"<<frame<<",\"task_id\":"<<task.id<<",\"unit_id\":"<<u->getID()
+                   <<",\"position\":["<<from.x<<","<<from.y<<"],\"goal\":["<<f.moveGoal.x<<","<<f.moveGoal.y<<"]";
+                writeAssembly(task,u);log<<"}"<<std::endl;
+            }
+        }
+        task.phase=skirmishing?"detection_skirmishing":task.assemblyRefuge.isValid()?"assembly_shared_refuge":protectedCount?(evading?"evading_cloak":"waiting_detection"):evading?"assembly_evading":
+            engaged?"assembly_defending":arrived?"assembly_waiting":"assembly_joining";
+        task.reportedArrived=arrived;task.reportedEngaged=engaged;
+        if(frame%120==0 || task.phase!=previousPhase)taskState(task,units,arrived);
+    }
+    void writeAssembly(const BattleTask& task,Unit u=nullptr) {
+        log<<",\"assembly_policy\":\"shared_local_refuge_v2\",\"assembly_origin\":["<<task.assemblyOrigin.x<<","<<task.assemblyOrigin.y<<"]";
+        if(task.assemblyRefuge.isValid())log<<",\"assembly_refuge\":["<<task.assemblyRefuge.x<<","<<task.assemblyRefuge.y<<"]";
+        if(u) {
+            auto post=task.assemblyPosts.find(u->getID());auto f=task.flight.find(u->getID());
+            if(post!=task.assemblyPosts.end())log<<",\"assembly_post\":["<<post->second.x<<","<<post->second.y<<"]";
+            if(f!=task.flight.end())log<<",\"assembly_stage\":\""<<f->second.rallyStage<<"\",\"assembly_role\":\""<<f->second.rallyRole<<"\"";
+        }
+    }
     void releaseUnit(Unit u,const char* kind) {
         if(!live(u))return;
         auto previous=u->getLastCommand();
@@ -849,6 +1094,10 @@ class CommanderLayer final : public AIModule {
         for(auto ability:type.abilities())if(ability.getWeapon()!=WeaponTypes::None && ability.getWeapon().damageAmount()>0)return true;
         return false;
     }
+    Position patrolPost(const BattleTask& task,Unit u) const {
+        auto post=task.standbySlots.find(u->getID());
+        return post==task.standbySlots.end()?Position(int(task.encounter.origin.x),int(task.encounter.origin.y)):post->second;
+    }
     Position clearEnemyGoal(const BattleTask& task,const std::vector<Unit>& units) const {
         Position best=Positions::None;double score=1e18;
         Position origin(int(task.encounter.origin.x),int(task.encounter.origin.y));
@@ -857,12 +1106,13 @@ class CommanderLayer final : public AIModule {
             bool active=live(victim) && victim->getPlayer()==game->self() &&
                 (e->isAttacking() || e->isStartingAttack() || e->getOrder()==Orders::AttackUnit);
             bool defensive=type.isBuilding() && (armed(e) || type==Terran_Bunker);
-            if(!CommanderClear::target(type.isWorker(),type.isBuilding(),combatEnemy(e),active,e->getDistance(origin),defensive))continue;
             bool stationary=type.isBuilding() || !type.canMove() || e->isBurrowed() || e->isSieged();
             bool permitted=std::any_of(units.begin(),units.end(),[&](Unit u) {
                 auto delta=e->getPosition()-u->getPosition();
                 bool fleeing=e->getVelocityX()*delta.x+e->getVelocityY()*delta.y>std::max(1.0,e->getPosition().getDistance(u->getPosition()))*.5;
-                return u->canAttack(e) && (u->isFlying() || u->hasPath(e->getPosition())) &&
+                bool local=CommanderClear::localDefence(type.isWorker(),combatEnemy(e) || defensive,active,u->isInWeaponRange(e),fleeing,u->getDistance(e));
+                return CommanderClear::target(type.isWorker(),type.isBuilding(),combatEnemy(e),active,e->getDistance(patrolPost(task,u)),defensive,local) &&
+                    u->canAttack(e) && (u->isFlying() || u->hasPath(e->getPosition())) &&
                     CommanderClear::approach(stationary,u->isInWeaponRange(e),fleeing,u->getDistance(e));
             });
             if(permitted) {double d=e->getDistance(groupCenter(units));if(d<score){score=d;best=e->getPosition();}}
@@ -998,7 +1248,9 @@ class CommanderLayer final : public AIModule {
         log<<"]}"<<std::endl;
     }
     void applyKeys() {
-        for(int key:keys) {
+        for(int raw:keys) {
+            bool safeRetreat=raw==CommanderKeys::safeRally;
+            int key=safeRetreat?'8':raw;
             if(key<'0' || key>'9')continue;
             feedback="applied";Plans::Result result;std::string action;
             auto previousMode=orders.selected;
@@ -1010,6 +1262,8 @@ class CommanderLayer final : public AIModule {
                 for(int id:result.manualUnits)releaseUnit(ours(id),"army");
                 if(ours(evadeId)){releasedProbe=evadeId;releaseUnit(ours(evadeId),"probe");}
                 evadeId=-1;evadeStatus="idle";evadeHome=false;evadeGoal=Positions::None;evadeOrigin=Positions::None;
+                for(const auto& escort:escorts)releaseUnit(ours(escort.first),"observer");
+                escorts.clear();
                 battleTasks.clear();battleLastOrder.clear();battleLastTask.clear();
                 miningLocked=false;ProbeCommandGuard::releaseAll(this);miningBuilds.clear();miningResources.clear();miningSettle.clear();
             }
@@ -1041,7 +1295,7 @@ class CommanderLayer final : public AIModule {
                 feedback="mode_selected";action="select_mode";
             } else {
                 Plans::Action requested=key=='5'?Plans::Action::Expansion:key=='6'?Plans::Action::MainBase:
-                    key=='8'?Plans::Action::Retreat:key=='7'?Plans::Action::Clear:Plans::Action::Defend;
+                    key=='8'?(safeRetreat?Plans::Action::Retreat:Plans::Action::Gather):key=='7'?Plans::Action::Clear:Plans::Action::Defend;
                 action=Plans::actionName(requested);
                 int depot=key=='5'?expansionTarget():key=='6'?mainBuildingTarget():-1;
                 if(depot>=0)goal=remembered.at(depot).position;else if(key=='6')goal=enemyStart;
@@ -1054,12 +1308,26 @@ class CommanderLayer final : public AIModule {
                     for(auto u:candidates)available.push_back({u->getID(),health(u)>=.7,u->getType()!=Protoss_Reaver});
                     int existing=orders.selected==Plans::Scope::Squad?orders.squadTask:orders.mainTask;
                     auto previous=battleTasks.find(existing);
-                    bool confirmed=key>='5' && key<='7' && previous!=battleTasks.end() &&
-                        previous->second.key==key-'0' && previous->second.scope==orders.selected &&
-                        (key=='7' || (!previous->second.raid.withdrawing && previous->second.raidGoal==goal));
+                    bool confirmed=previous!=battleTasks.end() && previous->second.key==key-'0' && previous->second.scope==orders.selected &&
+                        ((key>='5' && key<='7' && (key=='7' || (!previous->second.raid.withdrawing &&
+                          ((key=='6' && previous->second.mainArea) || previous->second.raidGoal==goal)))) ||
+                         (key=='8' && (safeRetreat?previous->second.rendezvous:previous->second.stationary)));
                     if(confirmed) {
                         result.accepted=true;result.task=existing;result.status="task_confirmed";
                         for(auto u:taskUnits(existing))result.units.insert(u->getID());
+                        if(key=='7') {
+                            auto& task=previous->second;auto members=taskUnits(existing);origin=groupCenter(members);
+                            task.encounter=CommanderClear::Encounter{};task.encounter.origin=point(origin);
+                            task.standbyOrigin=origin;task.goal=origin;
+                            for(auto u:members) {
+                                task.standbySlots[u->getID()]=u->getPosition();
+                                auto& engagement=task.targeting[u->getID()];
+                                if(engagement.target<0){engagement.releasing=false;engagement.chaseSince=-1;}
+                            }
+                            result.status="patrol_reanchored";
+                            log<<"{\"event\":\"patrol_reanchored\",\"frame\":"<<frame<<",\"task_id\":"<<existing
+                               <<",\"origin\":["<<origin.x<<","<<origin.y<<"],\"preserved_focus\":true}"<<std::endl;
+                        }
                         goal=previous->second.goal;
                     } else result=key=='9'?orders.defendAll(available):orders.assign(available);
                     feedback=result.status;
@@ -1076,6 +1344,7 @@ class CommanderLayer final : public AIModule {
                                 task.raid.expectedSite=true;task.raidTile=TilePosition(enemyStart-Position(64,48));
                                 task.raidType=Protoss_Nexus;
                             }
+                            if(key=='6')initializeMainArea(task,units);
                             log<<"{\"event\":\"building_target_locked\",\"frame\":"<<frame<<",\"task_id\":"<<task.id
                                <<",\"depot_id\":"<<depot<<",\"key\":"<<(key-'0')<<",\"goal\":["<<goal.x<<","<<goal.y<<"]}"<<std::endl;
                         }
@@ -1084,7 +1353,21 @@ class CommanderLayer final : public AIModule {
                             goal=origin;task.standbyInPlace=true;task.standbyOrigin=origin;
                             for(auto u:units)task.standbySlots[u->getID()]=u->getPosition();
                         }
-                        if(key=='8') {
+                        if(key=='8' && !safeRetreat) {
+                            task.stationary=true;task.phase="assembly_joining";
+                            auto front=previous!=battleTasks.end()?assaultCore(previous->second,units):units;
+                            goal=assemblyFront(front);task.goal=goal;
+                            for(auto u:units)task.rallyInitial.insert(u->getID());
+                            if(!units.empty()) {
+                                // Prepare once with the chosen front cluster,
+                                // then keep this anchor even as new units join.
+                                task.assemblyOrigin=goal;
+                                log<<"{\"event\":\"assembly_point\",\"frame\":"<<frame<<",\"task_id\":"<<task.id
+                                   <<",\"origin\":["<<goal.x<<","<<goal.y<<"],\"policy\":\"shared_local_refuge_v2\"}"<<std::endl;
+                                prepareAssembly(task,units);
+                            }
+                        }
+                        if(key=='8' && safeRetreat) {
                             task.rendezvous=true;task.phase="rally_withdrawing";task.goal=home;
                             for(auto u:units)task.rallyInitial.insert(u->getID());
                             auto hazards=rallyHazards();prepareRally(task,units,hazards);
@@ -1096,10 +1379,10 @@ class CommanderLayer final : public AIModule {
                     }
                 }
             }
-            hudLastKey=key-'0';hudCommandUnits=int(result.units.size());hudReserves=int(result.reserves.size());hudLastMode=orders.selected;
+            hudLastKey=key-'0';hudLastSafeRally=safeRetreat;hudPhysicalKey=CommanderKeys::physical(raw);hudCommandUnits=int(result.units.size());hudReserves=int(result.reserves.size());hudLastMode=orders.selected;
             lastHudCommand=frame;
-            log<<"{\"event\":\"command\",\"schema\":6,\"keymap\":\"tenkeys_combat_v12\",\"frame\":"<<frame<<",\"key\":\""<<(key-'0')
-               <<"\",\"action\":\""<<action<<"\",\"mode\":\""<<Plans::scopeName(orders.selected)
+            log<<"{\"event\":\"command\",\"schema\":6,\"keymap\":\""<<CommanderKeys::version<<"\",\"frame\":"<<frame<<",\"key\":\""<<hudPhysicalKey
+               <<"\",\"modifier\":\"none\",\"action\":\""<<action<<"\",\"mode\":\""<<Plans::scopeName(orders.selected)
                <<"\",\"status\":\""<<feedback<<"\",\"task_id\":"<<result.task<<",\"units\":";writeIds(result.units);
             log<<",\"unit_count\":"<<result.units.size()<<",\"squad_ids\":";writeIds(orders.squad);
             log<<",\"reserve_task\":"<<result.reserveTask<<",\"inherited_task\":"<<result.inheritedTask<<",\"reserve_units\":";writeIds(result.reserves);
@@ -1113,8 +1396,8 @@ class CommanderLayer final : public AIModule {
             log<<",\"mining_lock\":"<<(miningLocked?"true":"false")<<",\"main_task\":"<<orders.mainTask<<",\"squad_task\":"<<orders.squadTask
                <<",\"stance\":\""<<taskLabel(orders.mainTask)<<"\",\"origin\":["<<origin.x<<","<<origin.y
                <<"],\"goal\":["<<goal.x<<","<<goal.y<<"]";
-            if(key=='8' && result.accepted)log<<",\"rendezvous_policy\":\"shared_safe_point_v1\"";
-            if(key=='7')log<<",\"clear_policy\":\"persistent_guard_v3\"";
+            if(key=='8' && result.accepted)log<<(safeRetreat?",\"rendezvous_policy\":\"shared_safe_point_v1\"":",\"assembly_policy\":\"shared_local_refuge_v2\"");
+            if(key=='7')log<<",\"clear_policy\":\"local_guard_v4\"";
             if(key=='9')log<<",\"global_defence\":true,\"multibase_policy\":\"proportional_reinforce_v1\"";
             if(key=='7' || key=='8' || key=='9' || key=='3')log<<",\"army_worker_policy\":\"ignore_worker_bait_v1\"";
             if(key=='1')log<<",\"probe_id\":"<<(feedback=="no_scout_probe"?-1:evadeId)
@@ -1164,14 +1447,15 @@ class CommanderLayer final : public AIModule {
             c.inRange=u->isInWeaponRange(e);c.anchorDistance=engagement.anchored?e->getPosition().getDistance(Position(int(engagement.anchor.x),int(engagement.anchor.y))):0;
             c.valid=u->canAttack(e) && (c.inRange || u->isFlying() || u->hasPath(e->getPosition()));
             if(task.action==Plans::Action::Expansion || task.action==Plans::Action::MainBase) {
-                c.objectiveBuilding=e->getID()==task.raid.depot && e->getDistance(task.raidGoal)<192;
+                c.objectiveBuilding=task.mainArea?e->getID()==task.mainTarget:e->getID()==task.raid.depot && e->getDistance(task.raidGoal)<192;
                 c.valid=c.valid && CommanderRaid::permits(c.objectiveBuilding,c.activeThreat,c.inRange,c.stationary,
                                                          e->getDistance(task.raidGoal),combatEnemy(e) || (c.building && c.armed),c.worker);
                 if(task.assaultJoining.count(u->getID()) && c.objectiveBuilding)c.valid=false;
             }
             if(task.clearTask && !cleared(task) &&
                (!CommanderClear::target(c.worker,c.building,combatEnemy(e),c.activeThreat,
-                 e->getDistance(Position(int(task.encounter.origin.x),int(task.encounter.origin.y))),c.building && canThreaten) ||
+                 e->getDistance(patrolPost(task,u)),c.building && canThreaten,
+                 CommanderClear::localDefence(c.worker,combatEnemy(e) || (c.building && canThreaten),c.activeThreat,c.inRange,c.fleeing,c.distance)) ||
                 !CommanderClear::approach(c.stationary,c.inRange,c.fleeing,c.distance)))c.valid=false;
             if(cleared(task)) {
                 auto post=task.standbySlots.find(u->getID());auto guard=task.standbyGuards.find(u->getID());
@@ -1277,6 +1561,194 @@ class CommanderLayer final : public AIModule {
         return enemy(choice.id);
     }
     std::map<int,int> battleLastTask;
+    bool detectionTask(const BattleTask& task) const {
+        return CommanderDetection::protects(task.key,task.raid.withdrawing,false,task.stationary);
+    }
+    bool detectorCovers(Unit detector,Position p) const {
+        return live(detector) && detector->isCompleted() && detector->getType().isDetector() &&
+            !detector->isBlind() && !detector->isStasised() && !detector->isLockedDown() &&
+            !detector->isMaelstrommed() && detector->isPowered() &&
+            detector->getPosition().getDistance(p)<= (detector->getType().isBuilding()?224:detector->getPlayer()->sightRange(detector->getType()));
+    }
+    bool covered(Position p) const {
+        for(auto u:game->self()->getUnits())if(detectorCovers(u,p))return true;
+        return false;
+    }
+    // Preserve the Observer heartbeat too: the frozen bot's all-army average
+    // must not enqueue a competing destination before our support controller.
+    void renewObservers() {
+        for(const auto& item:escorts)if(auto u=ours(item.first))
+            if(frame-u->getLastCommandFrame()>=8 && item.second.goal.isValid())u->move(item.second.goal);
+    }
+    std::vector<Unit> assaultCore(const BattleTask& task,const std::vector<Unit>& units) const {
+        std::vector<Unit> core;
+        for(auto u:units)if(!task.assaultJoining.count(u->getID()))core.push_back(u);
+        return core.empty()?units:core;
+    }
+    void controlObservers() {
+        if(frame%8!=0)return;
+        std::vector<int> active;
+        for(int id:{orders.mainTask,orders.squadTask})if(id && std::find(active.begin(),active.end(),id)==active.end() &&
+            battleTasks.count(id) && !taskUnits(id).empty())active.push_back(id);
+        // Immediate invisible threats take precedence if only one Observer is
+        // available. With two tasks, provide one detector to each before extras.
+        std::stable_sort(active.begin(),active.end(),[&](int a,int b){
+            const auto& first=battleTasks.at(a);const auto& second=battleTasks.at(b);
+            if(first.cloakPauses.size()!=second.cloakPauses.size())return first.cloakPauses.size()>second.cloakPauses.size();
+            // Once the contact is resolved, keep scarce detection with the
+            // attacking/guarding force rather than returning it to reserves.
+            if(detectionTask(first)!=detectionTask(second))return detectionTask(first);
+            return taskUnits(a).size()>taskUnits(b).size();
+        });
+        std::vector<Unit> available;
+        for(auto u:game->self()->getUnits())if(live(u) && u->isCompleted() && u->getType()==Protoss_Observer)available.push_back(u);
+        auto previous=escorts;escorts.clear();int serial=0;
+        while(!active.empty() && !available.empty()) {
+            int id=active[serial%active.size()];auto& task=battleTasks.at(id);
+            auto units=taskUnits(id);auto core=assaultCore(task,units);Position front=groupCenter(core);
+            // Rear reinforcements outside the actual dense fighting group are
+            // deliberately excluded, even when the task is full-team.
+            Position anchor=front,contact=Positions::None;
+            double nearest=1e18;
+            for(const auto& pause:task.cloakPauses)if(ours(pause.first)) {
+                double d=ours(pause.first)->getDistance(front);
+                if(d<nearest){nearest=d;contact=pause.second.threat;anchor=ours(pause.first)->getPosition();}
+            }
+            if(contact.isValid())anchor=toward(contact,anchor,128);
+            else if(detectionTask(task)) {
+                Position objective=task.mainArea?task.goal:task.raidGoal.isValid()?task.raidGoal:task.goal;
+                Unit leading=nullptr;double best=1e18;
+                for(auto u:core)if(u->getDistance(front)<288 && u->getDistance(objective)<best){best=u->getDistance(objective);leading=u;}
+                if(leading)anchor=toward(leading->getPosition(),front,std::min(64.0,leading->getPosition().getDistance(front)));
+            }
+            if(serial>=int(active.size())) {
+                Position facing=task.goal.isValid()?task.goal:home;
+                double length=std::max(1.0,front.getDistance(facing));
+                anchor=clamp(anchor+Position(int(-(facing.y-front.y)*64/length),int((facing.x-front.x)*64/length)));
+            }
+            auto chosen=std::min_element(available.begin(),available.end(),[&](Unit a,Unit b){
+                auto score=[&](Unit u){return u->getDistance(anchor)-(previous.count(u->getID()) && previous.at(u->getID()).task==id?192:0);};
+                return score(a)<score(b);
+            });
+            Unit observer=*chosen;available.erase(chosen);
+            Position goal=anchor;double best=1e18;
+            // Score safe offsets around the real front. Anti-air avoidance
+            // uses air weapon range, never the baseline's distant army mean.
+            for(int radius:{0,64,128,192})for(int i=0;i<(radius?16:1);++i) {
+                double angle=i*3.141592653589793/8;
+                Position p=clamp(anchor+Position(int(std::cos(angle)*radius),int(std::sin(angle)*radius)));
+                double risk=0;
+                for(auto e:foes)if(e->exists() && e->isVisible() && e->getType().airWeapon()!=WeaponTypes::None) {
+                    double reach=e->getPlayer()->weaponMaxRange(e->getType().airWeapon())+96;
+                    risk+=std::max(0.0,reach-e->getDistance(p))*100;
+                }
+                double range=observer->getPlayer()->sightRange(observer->getType())-32;
+                double coverage=contact.isValid()?std::max(0.0,p.getDistance(contact)-range)*20:0;
+                double score=risk+coverage+p.getDistance(anchor)+observer->getDistance(p)*.02;
+                if(score<best){best=score;goal=p;}
+            }
+            escorts[observer->getID()]={id,goal};
+            auto cmd=observer->getLastCommand();
+            bool changed=!previous.count(observer->getID()) || previous.at(observer->getID()).task!=id ||
+                previous.at(observer->getID()).goal.getDistance(goal)>=24;
+            bool accepted=true;
+            if(changed || cmd.getType()!=UnitCommandTypes::Move || cmd.getTargetPosition().getDistance(goal)>=24 ||
+                frame-observer->getLastCommandFrame()>=8)accepted=observer->move(goal);
+            if(changed || frame%120==0)log<<"{\"event\":\"observer_escort\",\"frame\":"<<frame<<",\"task_id\":"<<id
+                <<",\"unit_id\":"<<observer->getID()<<",\"front\":["<<front.x<<","<<front.y<<"],\"goal\":["<<goal.x<<","<<goal.y
+                <<"],\"position\":["<<observer->getPosition().x<<","<<observer->getPosition().y<<"],\"accepted\":"<<(accepted?"true":"false")
+                <<",\"sight\":"<<observer->getPlayer()->sightRange(observer->getType())<<"}"<<std::endl;
+            ++serial;
+        }
+        for(const auto& old:previous)if(!escorts.count(old.first))releaseUnit(ours(old.first),"observer");
+    }
+    bool cloakSafeAttack(Unit u,Unit target,const CloakPause& pause) const {
+        if(!live(target) || !target->isVisible() || !target->isDetected() || target->getType().isWorker() ||
+           !u->canAttack(target) || (!combatEnemy(target) && !(target->getType().isBuilding() && armed(target))))return false;
+        if(!u->isInWeaponRange(target) && u->getDistance(target)>128)return false;
+        auto weapon=target->isFlying()?u->getType().airWeapon():u->getType().groundWeapon();
+        double stand=std::max(32.0,double(u->getPlayer()->weaponMaxRange(weapon)+u->getType().width()/2+target->getType().width()/2-8));
+        Position to=u->isInWeaponRange(target)?u->getPosition():toward(target->getPosition(),u->getPosition(),stand);
+        if(!CommanderDetection::safeCombat(point(u->getPosition()),point(to),point(pause.threat)))return false;
+        for(auto e:foes)if(e->exists() && e->isVisible() && !e->isDetected() && !e->getType().isWorker() &&
+            e->getType().groundWeapon()!=WeaponTypes::None && !CommanderDetection::safeCombat(point(u->getPosition()),point(to),point(e->getPosition())))return false;
+        return true;
+    }
+    Unit cloakSafeEnemy(Unit u,BattleTask& task,const CloakPause& pause) {
+        if(task.stationary) {auto e=assemblyEnemy(u,task);return e && cloakSafeAttack(u,e,pause)?e:nullptr;}
+        auto& engagement=task.targeting[u->getID()];auto candidates=targetCandidates(u,task,engagement);
+        for(auto& c:candidates)if(c.valid && !cloakSafeAttack(u,enemy(c.id),pause))c.valid=false;
+        auto choice=engagement.choose(frame,point(u->getPosition()),candidates);
+        if(choice.id<0)return nullptr;
+        for(const auto& c:candidates)if(c.id==choice.id)engagement.commit(frame,point(u->getPosition()),c.id,c.inRange,!c.building && !c.stationary);
+        return enemy(choice.id);
+    }
+    bool cloakProtection(Unit u,BattleTask& task) {
+        if(!CommanderDetection::protects(task.key,task.raid.withdrawing,u->isFlying(),task.stationary))return false;
+        auto found=task.cloakPauses.find(u->getID());Unit hidden=nullptr;double nearest=CommanderDetection::contactRadius;
+        for(auto e:foes)if(e->exists() && e->isVisible() && !e->isDetected() && !e->getType().isWorker() &&
+            e->getType().groundWeapon()!=WeaponTypes::None && e->getDistance(u)<nearest) {
+            nearest=e->getDistance(u);hidden=e;
+        }
+        if(hidden) {
+            auto& pause=task.cloakPauses[u->getID()];
+            if(pause.enemy!=hidden->getID())pause.lastPlan=-10000;
+            pause.enemy=hidden->getID();pause.lastSeen=frame;pause.threat=hidden->getPosition();
+            found=task.cloakPauses.find(u->getID());
+        }
+        if(found==task.cloakPauses.end())return false;
+        auto& pause=found->second;Unit contact=game->getUnit(pause.enemy);
+        bool detected=contact && contact->isVisible() && contact->isDetected();
+        bool checked=game->isVisible(TilePosition(pause.threat)) && covered(pause.threat) && (!contact || !contact->isVisible());
+        if(CommanderDetection::release(!destroyedEnemies.count(pause.enemy),detected,checked,frame-pause.lastSeen,u->getDistance(pause.threat))) {
+            log<<"{\"event\":\"detection_resumed\",\"frame\":"<<frame<<",\"task_id\":"<<task.id<<",\"key\":"<<task.key
+               <<",\"unit_id\":"<<u->getID()<<",\"enemy_id\":"<<pause.enemy<<",\"detected\":"<<(detected?"true":"false")<<"}"<<std::endl;
+            task.cloakPauses.erase(found);return false;
+        }
+        if(Unit safe=cloakSafeEnemy(u,task,pause)) {
+            bool changed=pause.safeTarget!=safe->getID();pause.safeTarget=safe->getID();pause.evading=false;
+            battleOrder(u,task,safe->getPosition(),safe,false,false);
+            if(changed || frame%24==0)log<<"{\"event\":\"detection_skirmish\",\"frame\":"<<frame<<",\"task_id\":"<<task.id
+                <<",\"unit_id\":"<<u->getID()<<",\"enemy_id\":"<<pause.enemy<<",\"target_id\":"<<safe->getID()
+                <<",\"position\":["<<u->getPosition().x<<","<<u->getPosition().y<<"],\"threat\":["<<pause.threat.x<<","<<pause.threat.y
+                <<"],\"target_position\":["<<safe->getPosition().x<<","<<safe->getPosition().y
+                <<"],\"state\":\"detection_skirmishing\",\"task_preserved\":true}"<<std::endl;
+            return true;
+        }
+        pause.safeTarget=-1;
+        bool attacking=hidden && hidden->getOrderTarget()==u;
+        bool evading=CommanderDetection::evade(u->getDistance(pause.threat),attacking);
+        if(!pause.goal.isValid() || frame-pause.lastPlan>=24 || (evading && pause.goal.getDistance(pause.threat)<256)) {
+            Position goal=u->getPosition();double best=-1e18;
+            auto risks=threats(true);
+            for(int radius:{0,64,128,192})for(int i=0;i<(radius?16:1);++i) {
+                double angle=i*3.141592653589793/8;
+                Position p=clamp(u->getPosition()+Position(int(std::cos(angle)*radius),int(std::sin(angle)*radius)));
+                if(!groundPoint(p,{u}))continue;
+                double separation=p.getDistance(pause.threat);
+                for(auto e:foes)if(e->exists() && e->isVisible() && !e->isDetected() && !e->getType().isWorker() && e->getType().groundWeapon()!=WeaponTypes::None)
+                    separation=std::min(separation,double(e->getDistance(p)));
+                double score=std::min(288.0,separation)*10-Rules::danger(point(p),risks)*256-p.getDistance(u->getPosition())*.4;
+                if(score>best){best=score;goal=p;}
+            }
+            pause.goal=goal;pause.lastPlan=frame;
+        }
+        if(task.stationary) {
+            Position post=task.assemblyRefuge.isValid()?task.assemblyRefuge:task.assemblyOrigin;
+            auto choice=assemblyStep(u,task,post,assemblyHazards(task));
+            pause.goal=Position(int(choice.position.x),int(choice.position.y));pause.lastPlan=frame;
+        }
+        bool changed=pause.evading!=evading;pause.evading=evading;
+        // Ordinary movement suppresses native automatic acquisition. Never let
+        // an empty Reaver's ammunition fallback replace this safety destination.
+        battleOrder(u,task,pause.goal,nullptr,false,false);
+        if(changed || frame%24==0)log<<"{\"event\":\"detection_guard\",\"frame\":"<<frame<<",\"task_id\":"<<task.id
+            <<",\"key\":"<<task.key<<",\"unit_id\":"<<u->getID()<<",\"enemy_id\":"<<pause.enemy
+            <<",\"state\":\""<<(evading?"evading_cloak":"waiting_detection")<<"\",\"position\":["<<u->getPosition().x<<","<<u->getPosition().y
+            <<"],\"threat\":["<<pause.threat.x<<","<<pause.threat.y<<"],\"goal\":["<<pause.goal.x<<","<<pause.goal.y
+            <<"],\"covered\":"<<(covered(pause.threat)?"true":"false")<<",\"observer_count\":"<<escorts.size()<<"}"<<std::endl;
+        return true;
+    }
     void renewManualOrders() {
         // Renew manually owned army orders before the frozen bot's command
         // interval, so its automatic objectives cannot enter the native queue.
@@ -1284,7 +1756,16 @@ class CommanderLayer final : public AIModule {
             int id=orders.taskFor(u->getID());auto found=battleTasks.find(id);
             if(found==battleTasks.end())continue;
             auto& task=found->second;
-            
+            auto pause=task.cloakPauses.find(u->getID());
+            if(pause!=task.cloakPauses.end() && detectionTask(task)) {
+                if(frame-u->getLastCommandFrame()>=8) {
+                    Unit target=enemy(pause->second.safeTarget);
+                    if(target && (!task.stationary || u->isInWeaponRange(target)) && cloakSafeAttack(u,target,pause->second)) {
+                        if(!u->isAttackFrame() && !u->isStartingAttack())u->attack(target);
+                    } else if(pause->second.goal.isValid())u->move(pause->second.goal);
+                }
+                continue;
+            }
             if(frame-u->getLastCommandFrame()<8 || u->isAttackFrame() || u->isStartingAttack())continue;
             auto cmd=u->getLastCommand();
             if(task.action==Plans::Action::Expansion || task.action==Plans::Action::MainBase || task.clearTask) {
@@ -1294,14 +1775,17 @@ class CommanderLayer final : public AIModule {
                     for(const auto& c:candidates)if(c.id==cmd.getTarget()->getID() && c.valid)targetAllowed=true;
                 }
                 if(!targetAllowed) {
-                    Position desired=task.raidGoal.isValid()?task.raidGoal:task.goal;
+                    Position desired=task.mainArea?task.goal:task.raidGoal.isValid()?task.raidGoal:task.goal;
                     if(task.assaultJoining.count(u->getID()) && task.assaultJoinPoint.isValid())desired=task.assaultJoinPoint;
-                    auto post=task.standbySlots.find(u->getID());
-                    if(task.clearTask && post!=task.standbySlots.end() && !task.encounter.searching(frame))desired=post->second;
+                    if(task.clearTask) {
+                        Position post=patrolPost(task,u);
+                        bool localSearch=task.encounter.emptySince>=0 && task.encounter.searching(frame) && task.goal.getDistance(post)<=CommanderClear::radius;
+                        desired=localSearch?task.goal:post;
+                    }
                     Position goal=reachablePoint(desired,{u});
                     cmd=u->getDistance(goal)<64?UnitCommand::holdPosition(u):UnitCommand::move(u,goal);
                 }
-            } else if(task.action==Plans::Action::Defend && cmd.getType()==UnitCommandTypes::Attack_Unit &&
+            } else if((task.action==Plans::Action::Defend || task.stationary) && cmd.getType()==UnitCommandTypes::Attack_Unit &&
                       live(cmd.getTarget()) && !cmd.getTarget()->getType().isWorker() && u->isInWeaponRange(cmd.getTarget())) {
                 // Keep the explicit in-range combat target, rather than
                 // replacing a legitimate shot with a move on each heartbeat.
@@ -1532,7 +2016,7 @@ class CommanderLayer final : public AIModule {
     }
     void battleOrder(Unit u,BattleTask& task,Position destination,Unit target,bool attackMove,bool holdFire=false) {
         auto nativeTarget=u->getOrderTarget();if(!nativeTarget)nativeTarget=u->getTarget();
-        bool ignoreWorkers=task.clearTask || task.action==Plans::Action::Defend;
+        bool ignoreWorkers=task.stationary || task.clearTask || task.action==Plans::Action::Defend;
         bool ignoredWorker=ignoreWorkers && live(nativeTarget) && nativeTarget->getType().isWorker() && game->self()->isEnemy(nativeTarget->getPlayer());
         bool workerNear=ignoreWorkers && !target && std::any_of(foes.begin(),foes.end(),[&](Unit e){
             return live(e) && e->getType().isWorker() && e->getDistance(u)<=std::max(320,u->getType().groundWeapon().maxRange()+96);
@@ -1540,14 +2024,14 @@ class CommanderLayer final : public AIModule {
         // Native Hold Position can auto-fire at workers despite our target
         // filter. Renew a zero-distance ordinary move while waiting beside
         // workers, so no native idle/hold acquisition can start a chase/shot.
-        bool quietWait=workerNear && holdFire;
+        bool quietWait=(task.stationary || workerNear) && holdFire;
         if(quietWait){holdFire=false;destination=u->getPosition();}
         // An empty Reaver cannot accept BWAPI attack commands. Keep it on the
         // new assault task and move toward that objective while the unchanged
         // baseline produces ammunition; switch to attack as soon as it is ready.
         bool awaitingAmmo=u->getType()==Protoss_Reaver && u->getScarabCount()==0 &&
             (task.action==Plans::Action::MainBase || task.action==Plans::Action::Expansion || task.action==Plans::Action::Clear || cleared(task));
-        if(awaitingAmmo){target=nullptr;attackMove=false;if(!task.clearTask)destination=task.goal;}
+        if(awaitingAmmo && !task.cloakPauses.count(u->getID())){target=nullptr;attackMove=false;if(!task.clearTask)destination=task.goal;}
         auto before=u->getLastCommand();
         auto expected=holdFire?UnitCommandTypes::Hold_Position:target?UnitCommandTypes::Attack_Unit:attackMove?UnitCommandTypes::Attack_Move:UnitCommandTypes::Move;
         auto matches=[&](const UnitCommand& command) {
@@ -1555,7 +2039,7 @@ class CommanderLayer final : public AIModule {
         };
         bool same=matches(before);
         bool flightTask=task.action==Plans::Action::Retreat || task.action==Plans::Action::Defend;
-        bool boundedAdvance=!target && !attackMove && (task.action==Plans::Action::Expansion || task.action==Plans::Action::MainBase || task.clearTask || (task.targeting.count(u->getID()) && task.targeting.at(u->getID()).advanceOnly));
+        bool boundedAdvance=!target && !attackMove && (task.stationary || task.action==Plans::Action::Expansion || task.action==Plans::Action::MainBase || task.clearTask || (task.targeting.count(u->getID()) && task.targeting.at(u->getID()).advanceOnly));
         // A completed Move can auto-acquire enemies inside StarCraft without
         // changing BWAPI's cached last command. Cancel that native pursuit too.
         bool nativeOrderBlock=(flightTask || boundedAdvance) && !target && !holdFire && u->getOrder()!=Orders::Move && !u->isIdle();
@@ -1575,6 +2059,7 @@ class CommanderLayer final : public AIModule {
         auto after=u->getLastCommand();bool verified=matches(after);
         if(accepted){battleLastOrder[u->getID()]=frame;battleLastTask[u->getID()]=task.id;}
         if(conflict)++battleOverrides;
+        if(task.stationary && quietWait && same && accepted && verified && !conflict && frame%120!=0)return;
         auto previous=before.getTargetPosition(),final=after.getTargetPosition(),p=u->getPosition();
         log<<"{\"event\":\"battle_order\",\"schema\":4,\"frame\":"<<frame<<",\"task_id\":"<<task.id
            <<",\"unit_id\":"<<u->getID()<<",\"unit_type\":"<<u->getType().getID()<<",\"error\":"<<errorCode
@@ -1586,16 +2071,18 @@ class CommanderLayer final : public AIModule {
            <<",\"awaiting_ammo\":"<<(awaitingAmmo?"true":"false")
            <<",\"native_pursuit_cancelled\":"<<(nativeChase?"true":"false")
            <<",\"native_order_overridden\":"<<(nativeOrderBlock?"true":"false")
-           <<",\"ignored_worker_cancelled\":"<<(ignoredWorker?"true":"false")<<",\"worker_quiet_wait\":"<<(quietWait?"true":"false")
+           <<",\"ignored_worker_cancelled\":"<<(ignoredWorker?"true":"false")<<",\"worker_quiet_wait\":"<<(quietWait && workerNear?"true":"false")
+           <<",\"stationary_quiet_wait\":"<<(task.stationary && quietWait?"true":"false")
            <<",\"conflict\":"<<(conflict?"true":"false")<<",\"overrides\":"<<battleOverrides;
         if(task.action==Plans::Action::Retreat || task.action==Plans::Action::Defend)writeFlight(u,task);
         else {
             auto facts=task.targetFacts.find(u->getID());
-            log<<",\"targeting_policy\":\"local_focus_finish_target\",\"disengaging\":"<<(boundedAdvance?"true":"false");
+            log<<",\"targeting_policy\":\""<<(task.stationary?"stationary_return_fire_v1":"local_focus_finish_target")<<"\",\"disengaging\":"<<(boundedAdvance?"true":"false");
             if(facts!=task.targetFacts.end() && facts->second.id>=0)
                 log<<",\"target_reason\":\""<<Targeting::reason(facts->second)<<"\",\"target_tier\":"<<Targeting::priority(facts->second);
         }
         if(cleared(task))writeStandby(u,task,target);
+        if(task.stationary)writeAssembly(task,u);
         writeRaid(task);log<<"}"<<std::endl;
     }
     void taskState(const BattleTask& task,const std::vector<Unit>& units,int arrived) {
@@ -1606,10 +2093,10 @@ class CommanderLayer final : public AIModule {
         log<<"],\"overrides\":"<<battleOverrides;
         if(task.action==Plans::Action::Retreat)log<<",\"flight_policy\":\""<<(task.rendezvous?"rendezvous_run_first":"run_first")<<"\"";
         if(task.action==Plans::Action::Defend) {log<<",\"flight_policy\":\"return_then_defend\"";writeDefence(task);}
-        if(task.clearTask || task.action==Plans::Action::Defend || task.action==Plans::Action::Retreat)log<<",\"army_worker_policy\":\"ignore_worker_bait_v1\"";
+        if(task.stationary || task.clearTask || task.action==Plans::Action::Defend || task.action==Plans::Action::Retreat)log<<",\"army_worker_policy\":\"ignore_worker_bait_v1\"";
         if(task.action==Plans::Action::Defend && task.regionalBase<0)writeMultiBase(task,units);
         writeRaid(task);
-        if(task.clearTask)log<<",\"clear_task\":true,\"clear_policy\":\"persistent_guard_v3\",\"standby_in_place\":"<<(task.standbyInPlace?"true":"false")
+        if(task.clearTask)log<<",\"clear_task\":true,\"clear_policy\":\"local_guard_v4\",\"standby_in_place\":"<<(task.standbyInPlace?"true":"false")
             <<",\"clear_complete\":false,\"patrol_origin\":["<<task.encounter.origin.x<<","<<task.encounter.origin.y
             <<"],\"last_enemy_seen\":"<<task.encounter.lastSeen<<",\"patrol_radius\":"<<CommanderClear::radius;
         if(cleared(task)) {
@@ -1618,16 +2105,140 @@ class CommanderLayer final : public AIModule {
                <<",\"standby_posts\":"<<posts<<",\"standby_waiting_space\":"<<(units.size()-posts);
         }
         if(task.rendezvous)writeRendezvous(task);
+        if(task.stationary)writeAssembly(task);
         log<<"}"<<std::endl;
     }
     void writeRaid(const BattleTask& task) {
         if(!task.raidGoal.isValid())return;
         log<<",\"raid_depot\":"<<task.raid.depot<<",\"raid_goal\":["<<task.raidGoal.x<<","<<task.raidGoal.y
-           <<"],\"objective_role\":\""<<(task.key==6?"main":task.raidType.isResourceDepot()?"expansion":"near_enemy")<<"\",\"raid_policy\":\"combat_first_objective_v2\",\"auto_withdrawal\":"<<(task.raid.withdrawing?"true":"false")
+           <<"],\"objective_role\":\""<<(task.key==6?"main":task.raidType.isResourceDepot()?"expansion":"near_enemy")<<"\",\"raid_policy\":\""<<(task.mainArea?"main_area_outer_first_v1":"combat_first_objective_v2")<<"\",\"auto_withdrawal\":"<<(task.raid.withdrawing?"true":"false")
            <<",\"reinforcements_joining\":"<<task.assaultJoining.size();
+        if(task.mainArea)log<<",\"main_target\":"<<task.mainTarget<<",\"main_known_buildings\":"<<task.mainKnown.size()
+            <<",\"main_unchecked\":"<<task.mainUnchecked<<",\"main_region_radius\":768,\"main_stage\":\""<<task.mainStage<<"\"";
+    }
+    bool inMainArea(const BattleTask& task,Position p) const {
+        return CommanderMainArea::contains(point(p),point(task.raidGoal),task.mainOtherBases);
+    }
+    void initializeMainArea(BattleTask& task,const std::vector<Unit>& units) {
+        task.mainArea=true;
+        for(const auto& area:BWEM::Map::Instance().Areas())for(const auto& base:area.Bases()) {
+            Position p=Position(base.Location())+Position(64,48);
+            if(p.getDistance(task.raidGoal)>=448)task.mainOtherBases.push_back(point(p));
+        }
+        for(int x=std::max(0,task.raidGoal.x/32-24);x<=std::min(game->mapWidth()-1,task.raidGoal.x/32+24);++x)
+            for(int y=std::max(0,task.raidGoal.y/32-24);y<=std::min(game->mapHeight()-1,task.raidGoal.y/32+24);++y) {
+                Position p(x*32+16,y*32+16);
+                if(inMainArea(task,p) && groundPoint(p,units))task.mainSurvey.push_back(p);
+            }
+        task.mainChecked.resize(task.mainSurvey.size(),false);task.mainUnchecked=int(task.mainSurvey.size());
+    }
+    bool memoryFootprintVisible(const Memory& m) const {
+        if(!m.tile.isValid())return false;
+        for(int x=0;x<m.type.tileWidth();++x)for(int y=0;y<m.type.tileHeight();++y)
+            if(!game->isVisible(m.tile+TilePosition(x,y)))return false;
+        return true;
+    }
+    int pylonValue(Unit pylon,const std::vector<Unit>& buildings) const {
+        if(!pylon || !pylon->isVisible() || pylon->getType()!=Protoss_Pylon || !pylon->isCompleted())return 0;
+        int value=0;
+        for(auto b:buildings)if(b->getPlayer()==pylon->getPlayer() && b->getType().requiresPsi() && b->isPowered() &&
+            CommanderMainArea::powers(point(pylon->getPosition()),point(b->getPosition()))) {
+            bool alternative=std::any_of(buildings.begin(),buildings.end(),[&](Unit other){return other!=pylon &&
+                other->getPlayer()==pylon->getPlayer() && other->getType()==Protoss_Pylon && other->isCompleted() &&
+                CommanderMainArea::powers(point(other->getPosition()),point(b->getPosition()));});
+            if(!alternative)value+=armed(b)?2:1;
+        }
+        return value;
+    }
+    void beginRaidWithdrawal(BattleTask& task,const std::vector<Unit>& units,const char* reason) {
+        task.raid.withdrawing=true;
+        task.action=Plans::Action::Retreat;task.phase="rally_withdrawing";task.clearSince=-1;
+        task.targeting.clear();task.targetFacts.clear();task.focus.clear();task.flight.clear();task.escapes.clear();
+        task.cloakPauses.clear();
+        task.rendezvous=true;task.rallyFront=Positions::None;task.rallyInitial.clear();task.rallyFrontIds.clear();
+        task.goal=home;
+        for(auto u:units)task.rallyInitial.insert(u->getID());
+        auto hazards=rallyHazards();prepareRally(task,units,hazards);
+        for(auto u:units)if(Rally::frontUnit(point(home),point(task.rallyFront),point(task.goal),point(u->getPosition()),closeThreat(u,448)!=nullptr))
+            task.rallyFrontIds.insert(u->getID());
+        log<<"{\"event\":\"building_complete\",\"frame\":"<<frame<<",\"task_id\":"<<task.id<<",\"reason\":\""<<reason<<"\"";
+        writeRaid(task);log<<"}"<<std::endl;taskState(task,units,0);
+    }
+    void planMainArea(BattleTask& task,const std::vector<Unit>& units) {
+        if(frame-task.mainPlanFrame<8)return;
+        task.mainPlanFrame=frame;
+        std::vector<Unit> visibleBuildings;Unit localArmy=nullptr;double nearestArmy=1e18;
+        std::vector<Unit> core;
+        for(auto u:units)if(task.assaultMembers.count(u->getID()) && !task.assaultJoining.count(u->getID()))core.push_back(u);
+        Position front=groupCenter(core.empty()?units:core);
+        for(auto player:game->enemies())for(auto e:player->getUnits())if(e->exists() && e->isVisible()) {
+            if(e->getType().isBuilding()) {
+                visibleBuildings.push_back(e);
+                if(inMainArea(task,e->getPosition()))task.mainKnown[e->getID()]={e->getPosition(),e->getType(),e->getTilePosition()};
+            } else if(combatEnemy(e) && inMainArea(task,e->getPosition()) && e->getDistance(front)<nearestArmy) {
+                localArmy=e;nearestArmy=e->getDistance(front);
+            }
+        }
+        // Every retained contact was observed by our side. Losing visibility
+        // never discards it; only death, visible relocation, or a fully checked
+        // empty footprint can do so.
+        for(auto it=task.mainKnown.begin();it!=task.mainKnown.end();) {
+            Unit now=game->getUnit(it->first);
+            bool relocated=now && now->exists() && now->isVisible() && !inMainArea(task,now->getPosition());
+            bool present=now && now->exists() && now->isVisible() && now->getType().isBuilding();
+            bool gone=destroyedEnemies.count(it->first) || relocated || (!present && memoryFootprintVisible(it->second));
+            if(gone) {
+                log<<"{\"event\":\"main_building_cleared\",\"frame\":"<<frame<<",\"task_id\":"<<task.id<<",\"building_id\":"<<it->first
+                   <<",\"type\":"<<it->second.type.getID()<<",\"reason\":\""<<(destroyedEnemies.count(it->first)?"destroyed":relocated?"relocated_outside":"footprint_checked")<<"\"}"<<std::endl;
+                it=task.mainKnown.erase(it);
+            } else ++it;
+        }
+        // Import earlier genuine sightings too, including buildings now in fog.
+        for(const auto& e:remembered)if(!destroyedEnemies.count(e.first) && inMainArea(task,e.second.position) &&
+            !task.mainKnown.count(e.first) && !memoryFootprintVisible(e.second))task.mainKnown.insert(e);
+        task.mainUnchecked=0;Position survey=task.raidGoal;double surveyDistance=1e18;
+        for(size_t i=0;i<task.mainSurvey.size();++i) {
+            if(game->isVisible(TilePosition(task.mainSurvey[i])))task.mainChecked[i]=true;
+            if(!task.mainChecked[i]) {
+                ++task.mainUnchecked;double d=front.getDistance(task.mainSurvey[i]);
+                if(d<surveyDistance){surveyDistance=d;survey=task.mainSurvey[i];}
+            }
+        }
+        std::vector<CommanderMainArea::Building> candidates;
+        for(const auto& e:task.mainKnown) {
+            Unit now=game->getUnit(e.first);
+            if(!now || !now->exists() || !now->isVisible())now=nullptr;
+            bool reachable=std::any_of(units.begin(),units.end(),[&](Unit u){return now?
+                u->canAttack(now) && (u->isFlying() || u->hasPath(e.second.position)):
+                (u->isFlying() || u->hasPath(e.second.position)) && (u->getType().groundWeapon()!=WeaponTypes::None || u->getType()==Protoss_Carrier || u->getType()==Protoss_Reaver);});
+            if(!reachable)continue;
+            bool defensive=now && armed(now) && now->isCompleted() && (!now->getType().requiresPsi() || now->isPowered());
+            candidates.push_back({e.first,e.second.type.isResourceDepot(),e.second.type==Protoss_Pylon,defensive,
+                pylonValue(now,visibleBuildings),rallyPathDistance(front,e.second.position,false),now && now->isDetected()?health(now):1});
+        }
+        int chosen=CommanderMainArea::choose(candidates,task.mainTarget);
+        std::string stage;
+        if(chosen>=0) {
+            const auto& m=task.mainKnown.at(chosen);task.goal=m.position;
+            stage=m.type.isResourceDepot()?"main_core":m.type==Protoss_Pylon?"main_outer_pylon":"main_outer_building";
+        } else if(!task.mainKnown.empty()) {task.goal=front;stage="main_blocked";}
+        else if(localArmy) {task.goal=localArmy->getPosition();stage="main_combat";}
+        else {task.goal=survey;stage=task.mainUnchecked?"main_surveying":"main_confirming";}
+        if(chosen!=task.mainTarget || stage!=task.mainStage) {
+            log<<"{\"event\":\"main_target_selected\",\"frame\":"<<frame<<",\"task_id\":"<<task.id<<",\"previous\":"<<task.mainTarget
+               <<",\"target_id\":"<<chosen<<",\"type\":"<<(chosen>=0?task.mainKnown.at(chosen).type.getID():-1)
+               <<",\"stage\":\""<<stage<<"\",\"goal\":["<<task.goal.x<<","<<task.goal.y<<"],\"known_buildings\":"<<task.mainKnown.size()
+               <<",\"unchecked\":"<<task.mainUnchecked<<",\"power_value\":"<<(chosen>=0?pylonValue(enemy(chosen),visibleBuildings):0)<<"}"<<std::endl;
+        }
+        task.mainTarget=chosen;task.mainStage=stage;
+        bool empty=task.mainKnown.empty() && !task.mainUnchecked && !localArmy && task.cloakPauses.empty() && !task.mainSurvey.empty();
+        if(!empty)task.mainEmptySince=-1;else if(task.mainEmptySince<0)task.mainEmptySince=frame;
+        if(CommanderMainArea::complete(int(task.mainKnown.size()),task.mainUnchecked,localArmy!=nullptr,!task.cloakPauses.empty(),
+            task.mainEmptySince<0?0:frame-task.mainEmptySince))beginRaidWithdrawal(task,units,"main_area_cleared");
     }
     void finishRaid(BattleTask& task,const std::vector<Unit>& units) {
         if(task.action!=Plans::Action::Expansion && task.action!=Plans::Action::MainBase)return;
+        if(task.mainArea){planMainArea(task,units);return;}
         if(task.action==Plans::Action::MainBase && task.raid.depot<0) {
             for(auto player:game->enemies())for(auto e:player->getUnits())if(live(e) && e->isVisible() &&
                 e->getType().isResourceDepot() && e->getDistance(enemyStart)<512) {
@@ -1697,7 +2308,7 @@ class CommanderLayer final : public AIModule {
             if(first) {
                 watch.number=b->getDistance(home)>256?++expansionSerial:0;watch.complete=b->isCompleted();
                 if(watch.number)baseAlert(id,watch.complete?"expansion_complete":"expansion_started",
-                    L"分矿"+std::to_wstring(watch.number)+(watch.complete?L"建成":L"开建")+L"：附近"+std::to_wstring(nearby)+L"兵；9全军回防。",nearby);
+                    L"分矿"+std::to_wstring(watch.number)+(watch.complete?L"建成":L"开建")+L"：附近"+std::to_wstring(nearby)+L"兵；0全军回防。",nearby);
             } else if(!watch.complete && b->isCompleted()) {
                 watch.complete=true;
                 if(watch.number)baseAlert(id,"expansion_complete",L"分矿"+std::to_wstring(watch.number)+L"建成：附近"+std::to_wstring(nearby)+L"兵。",nearby);
@@ -1708,7 +2319,7 @@ class CommanderLayer final : public AIModule {
             if(watch.number && hit && (!watch.underAttack || frame-watch.lastAlert>=480)) {
                 watch.lastAlert=frame;
                 bool defending=battleTasks.count(orders.mainTask) && battleTasks.at(orders.mainTask).action==Plans::Action::Defend;
-                baseAlert(id,"expansion_attacked",L"分矿"+std::to_wstring(watch.number)+(defending?L"受袭：守军按敌情增援。":L"受袭：按9全军回防。"),nearby);
+                baseAlert(id,"expansion_attacked",L"分矿"+std::to_wstring(watch.number)+(defending?L"受袭：守军按敌情增援。":L"受袭：按0全军回防。"),nearby);
             }
             watch.underAttack=hit;
         }
@@ -1846,6 +2457,12 @@ class CommanderLayer final : public AIModule {
             int id=task.id;
             std::string previousPhase=task.phase;
             finishRaid(task,units);
+            for(auto it=task.cloakPauses.begin();it!=task.cloakPauses.end();) {
+                if(!detectionTask(task) || std::none_of(units.begin(),units.end(),[&](Unit u){return u->getID()==it->first;}))
+                    it=task.cloakPauses.erase(it);
+                else ++it;
+            }
+            if(task.stationary){controlAssembly(task,units);return;}
             if(task.action==Plans::Action::Clear) {
                 Position target=clearEnemyGoal(task,units);
                 if(target.isValid()) {
@@ -1900,8 +2517,13 @@ class CommanderLayer final : public AIModule {
             if(task.rendezvous){hazards=rallyHazards();prepareRally(task,units,hazards);}
             if(cleared(task))prepareStandby(task,units);
             prepareFocus(task,units);
-            int arrived=0,engaged=0,slot=0;
+            int arrived=0,engaged=0,slot=0,protectedCount=0,evadingCount=0,skirmishing=0;
             for(auto u:units) {
+                if(cloakProtection(u,task)) {
+                    ++protectedCount;if(task.cloakPauses.at(u->getID()).evading)++evadingCount;
+                    skirmishing+=task.cloakPauses.at(u->getID()).safeTarget>=0;
+                    continue;
+                }
                 Position goal=task.goal;Unit target=nullptr;bool attackMove=false,holdFire=false;
                 if(cleared(task)) {
                     auto post=task.standbySlots.find(u->getID());
@@ -1978,7 +2600,8 @@ class CommanderLayer final : public AIModule {
                     else if(task.action==Plans::Action::Gather) {
                         goal=reachablePoint(task.goal+Position((slot%5-2)*24,(slot/5%5-2)*24),{u});++slot;
                     } else if(task.action==Plans::Action::Clear) {
-                        bool search=task.encounter.emptySince>=0 && task.encounter.searching(frame);
+                        bool search=task.encounter.emptySince>=0 && task.encounter.searching(frame) &&
+                            task.goal.getDistance(patrolPost(task,u))<=CommanderClear::radius;
                         goal=reachablePoint(search?task.goal:task.standbySlots.at(u->getID()),{u});holdFire=u->getDistance(goal)<64;
                     } else if(task.targeting[u->getID()].advanceOnly) {
                         goal=reachablePoint(task.assaultJoining.count(u->getID())?task.assaultJoinPoint:task.goal,{u});
@@ -1986,7 +2609,7 @@ class CommanderLayer final : public AIModule {
                     } else if(task.action==Plans::Action::Expansion || task.action==Plans::Action::MainBase) {
                         // Plain movement cannot auto-acquire fleeing workers,
                         // unrelated structures, or enemies near the main base.
-                        goal=reachablePoint(task.assaultJoining.count(u->getID())?task.assaultJoinPoint:task.raidGoal,{u});
+                        goal=reachablePoint(task.assaultJoining.count(u->getID())?task.assaultJoinPoint:task.mainArea?task.goal:task.raidGoal,{u});
                         holdFire=u->getDistance(goal)<64;
                     } else attackMove=true;
                 }
@@ -2026,16 +2649,30 @@ class CommanderLayer final : public AIModule {
             else if(task.action==Plans::Action::Gather)task.phase=arrived==int(units.size())?"holding":"gathering";
             else if(task.action==Plans::Action::Defend)task.phase=engaged?"intercepting":arrived<int(units.size())?"returning":
                 std::any_of(units.begin(),units.end(),[&](Unit u){return task.flight.at(u->getID()).guard.returning;})?"reforming":"guarding";
+            else if(task.mainArea && task.action==Plans::Action::MainBase) {
+                bool combat=std::any_of(units.begin(),units.end(),[&](Unit u){
+                    auto t=task.targetFacts.find(u->getID());
+                    return t!=task.targetFacts.end() && enemy(t->second.id) && (!t->second.building || t->second.armed);
+                });
+                task.phase=combat?"main_combat":engaged?task.mainStage:
+                    (task.mainStage=="main_surveying" || task.mainStage=="main_confirming" || task.mainStage=="main_blocked")?task.mainStage:"main_advancing";
+            }
             else if(task.action!=Plans::Action::Retreat)task.phase=engaged?"engaging":"advancing";
+            if(protectedCount)task.phase=skirmishing?"detection_skirmishing":evadingCount?"evading_cloak":"waiting_detection";
             task.reportedArrived=arrived;task.reportedEngaged=engaged;
             if(!regional && (frame%120==0 || task.phase!=previousPhase))taskState(task,units,arrived);
     }
     void testInput() {
         if (testCommands.empty()) return;
-        std::ifstream file(testCommands);int sequence=0,key=0;
-        if (file>>sequence>>key && sequence>lastTestSequence && key>=-1 && key<=9) {
+        std::ifstream file(testCommands);int sequence=0,key=0;std::string token;
+        if(!(file>>sequence>>token))return;
+        if(token=="-1")key=-1;
+        else if(token.size()==1)key=CommanderKeys::shortcut(token[0]=='-'?CommanderKeys::topRowMinus:token[0],false,false,false);
+        else return;
+        if(!key)return;
+        if (sequence>lastTestSequence) {
             lastTestSequence=sequence;
-            if(key==-1){testStop=true;game->leaveGame();}else keys.push_back('0'+key);
+            if(key==-1){testStop=true;game->leaveGame();}else keys.push_back(key);
         }
     }
     std::wstring hudTask(int id,bool squad) const {
@@ -2053,7 +2690,7 @@ class CommanderLayer final : public AIModule {
         data.mode=orders.selected;data.selected=int(orders.selected==Plans::Scope::Squad?orders.squad.size():army.size());
         data.army=int(army.size());data.miningLocked=miningLocked;data.manualCamera=manual;data.status=feedback;data.scoutStatus=evadeStatus;
         data.mainTask=hudTask(orders.mainTask,false);data.squadTask=hudTask(orders.squadTask,true);
-        data.lastKey=hudLastKey;data.lastMode=hudLastMode;data.commandUnits=hudCommandUnits;data.reserves=hudReserves;
+        data.lastKey=hudLastKey;data.lastSafeRally=hudLastSafeRally;data.lastMode=hudLastMode;data.commandUnits=hudCommandUnits;data.reserves=hudReserves;
         if(frame<=noticeUntil && frame-lastHudCommand>72)data.notice=baseNotice;
         auto lines=CommanderHud::lines(data);size_t draws=0;int maxWidth=0;
         LARGE_INTEGER start{},stop{},frequency{};QueryPerformanceCounter(&start);
@@ -2082,7 +2719,7 @@ class CommanderLayer final : public AIModule {
                <<",\"font_pixels\":13,\"origin\":[6,16],\"line_pitch\":18"
                <<",\"draw_calls\":"<<draws<<",\"max_text_width\":"<<maxWidth
                <<",\"draw_microseconds\":"<<(frequency.QuadPart?double(stop.QuadPart-start.QuadPart)*1e6/frequency.QuadPart:0)
-               <<",\"last_key\":"<<hudLastKey<<",\"feedback\":\""<<feedback<<"\",\"lines\":[";
+               <<",\"last_key\":\""<<(hudPhysicalKey?std::string(1,hudPhysicalKey):std::string())<<"\",\"feedback\":\""<<feedback<<"\",\"lines\":[";
             bool comma=false;for(const auto& line:lines){if(comma)log<<",";comma=true;log<<CommanderHud::json(line);}
             log<<"]}"<<std::endl;
         }
@@ -2138,12 +2775,12 @@ public:
 
         if (human) {
             BWEM::Map::Instance().Initialize(game);BWEM::Map::Instance().FindBasesForStartingLocations();
-            keys.clear();std::fill_n(commandHeld,10,false);lastInput=GetTickCount64();mousePoint=-1;
+            keys.clear();std::fill_n(commandHeld,11,false);lastInput=GetTickCount64();mousePoint=-1;
             hook=SetWindowsHookExW(WH_GETMESSAGE,input,nullptr,GetCurrentThreadId());
         }
         log<<"{\"event\":\"start\",\"frame\":0,\"role\":\""<<role<<"\",\"human_layer\":"<<(human?"true":"false")
-           <<",\"delegate_loaded\":true,\"controls\":\"tenkeys-combat-v12\",\"viewport\":["
-           <<NativeViewport::size().x<<","<<NativeViewport::size().y<<"],\"keymap\":\"tenkeys_combat_v12\",\"squad_policy\":\"dynamic_quarter_v1\"}"<<std::endl;
+           <<",\"delegate_loaded\":true,\"controls\":\"toprow-commands-v17\",\"viewport\":["
+           <<NativeViewport::size().x<<","<<NativeViewport::size().y<<"],\"keymap\":\"toprow_commands_v17\",\"squad_policy\":\"dynamic_quarter_v1\"}"<<std::endl;
         HWND window=nullptr;EnumWindows(findGameWindow,reinterpret_cast<LPARAM>(&window));
         std::ofstream("bwapi-data/write/game-window.txt")<<reinterpret_cast<uintptr_t>(window);
     }
@@ -2154,7 +2791,7 @@ public:
         if(lastTick==frame)return;lastTick=frame;
         if(human) {
             if(miningLocked && !attachMiningGuards()){miningLocked=false;ProbeCommandGuard::releaseAll(this);feedback="mining_unavailable";}
-            renewScoutOwnership();renewManualOrders();
+            renewScoutOwnership();renewManualOrders();renewObservers();
         }
         bool diagnoseFrame=frame<240 || frame%120==0;
         if(diagnoseFrame)diagnosticStage("frame_enter");
@@ -2169,7 +2806,7 @@ public:
             testInput();if(testStop)return;bool commandPending=!keys.empty();
             if(commandPending){refresh();observeBases();}applyKeys();
             if(frame%8==0 || commandPending)reinforceSquad();
-            controlBattle();
+            controlBattle();controlObservers();
             // Plan rescue after fresh observations. The pre-delegate renewal
             // prevents two competing native moves from entering the same turn.
             protectScout();
@@ -2189,18 +2826,22 @@ public:
             if(human && !testCommands.empty()) {
                 log<<"{\"event\":\"validation_native\",\"frame\":"<<frame<<",\"units\":[";
                 bool comma=false;
-                for(auto player:game->getPlayers())if(!player->isNeutral())for(auto u:player->getUnits())if(live(u) && (player==game->self() || u->isVisible())) {
+                for(auto player:game->getPlayers())if(!player->isNeutral())for(auto u:player->getUnits())if(u && u->exists() && (player==game->self() || u->isVisible())) {
                     if(comma)log<<",";comma=true;auto target=u->getOrderTarget();auto pos=u->getPosition();
                     log<<"{\"id\":"<<u->getID()<<",\"self\":"<<(player==game->self()?"true":"false")
                        <<",\"type\":"<<u->getType().getID()<<",\"position\":["<<pos.x<<","<<pos.y<<"]"
                        <<",\"order\":"<<u->getOrder().getID()<<",\"target\":"<<(target?target->getID():-1)
                        <<",\"hp\":"<<u->getHitPoints()<<",\"shield\":"<<u->getShields()
+                       <<",\"detected\":"<<(u->isDetected()?"true":"false")<<",\"cloaked\":"<<(u->isCloaked()?"true":"false")
+                       <<",\"completed\":"<<(u->isCompleted()?"true":"false")<<",\"sight\":"<<u->getPlayer()->sightRange(u->getType())
+                       <<",\"powered\":"<<(u->isPowered()?"true":"false")
+                       <<",\"attacking\":"<<(u->isAttacking()?"true":"false")<<",\"cooldown\":"<<u->getGroundWeaponCooldown()
                        <<",\"invincible\":"<<(u->isInvincible()?"true":"false")<<"}";
                 }
                 log<<"]}"<<std::endl;
             }
             Position c=center();
-            log<<"{\"event\":\"state\",\"frame\":"<<frame<<",\"schema\":6,\"keymap\":\"tenkeys_combat_v12\",\"stance\":\""<<(human?taskLabel(orders.mainTask):"baseline")
+            log<<"{\"event\":\"state\",\"frame\":"<<frame<<",\"schema\":6,\"keymap\":\"toprow_commands_v17\",\"stance\":\""<<(human?taskLabel(orders.mainTask):"baseline")
                <<"\",\"mode\":\""<<Plans::scopeName(orders.selected)<<"\",\"workers\":"
                <<std::count_if(game->self()->getUnits().begin(),game->self()->getUnits().end(),[](Unit u){return u->getType().isWorker();})
                <<",\"completed_workers\":"<<std::count_if(game->self()->getUnits().begin(),game->self()->getUnits().end(),[](Unit u){return u->getType().isWorker() && u->isCompleted();})
@@ -2240,6 +2881,7 @@ public:
     void onSaveGame(std::string name) override {if(delegate)delegate->onSaveGame(name);}
     void onUnitDestroy(Unit u) override {
         ProbeCommandGuard::release(u);
+        if(u && game->self()->isEnemy(u->getPlayer()))destroyedEnemies.insert(u->getID());
         if(human && u)for(auto& entry:battleTasks) {
             entry.second.raid.lost(u->getID());entry.second.encounter.destroyed(u->getID());
         }

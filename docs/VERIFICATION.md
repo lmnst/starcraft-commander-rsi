@@ -1,5 +1,16 @@
 # 验证记录
 
+## v17同步（2026-11-19）
+
+- CommanderLayer、策略头文件和回放核心同步本机最新版；保留发布包的游戏目录选择、自带Python/Tk及Java和包内运行库寻址。
+- 包含v13观察者随队和反隐保护、v14原地集结、v15就近警戒和共同避险、v16主基地区域清场，以及窗口焦点管理。
+- v17原生验证通过Windows消息钩子执行2、8、9、0、-、8；覆盖长按去重、Alt+8与小键盘减号不触发人工指令。0保留采矿锁，-解除全部人工任务；2401帧验证中未发现下令失败。
+- 游戏HUD记录已显示9撤离集结、0回防、-重置，位置和字号保持；37项回放测试含v17与v16的不同键义解释，发布仓库全部46项Python测试通过。
+- 冻结Bot.cpp和Baseline.dll的SHA256保持不变；构建禁止屏幕捕获。
+- v17最终ZIP逐文件校验并重新解压后，禁用开发SDK和外部Python／Java路径，自带exe启动自检通过；全局／我方回放均通过暂停、600帧前进、120帧后退重载、倍速恢复。包内组件对PylonPuller短局推进3601帧，最多14名工人、采集1202矿，在测试帧数上限主动结束。详见 `validation/portable-v17-release-acceptance.json`，SHA256为 `94e5d95c89e319472c7c5343663e12e8b27bad10df40b8bdc2255a50367ee9e5`。
+
+规则验证记录见 `validation/top-row-v17-acceptance.json`、`detector-v13-acceptance.json`、`assembly-v14-acceptance.json`、`local-combat-v15-acceptance.json`、`main-area-v16-acceptance.json` 和 `window-management-acceptance.json`。以下v12记录保留为历史证据。
+
 ## 战斗与回放规则（2026-11-17）
 
 当前指挥层为十键v12，基线保持v6-fix-r1-20261110。原生数据验收记录在 `validation/20261117-combat-v12-acceptance.json`，其中原机器的目录仅作历史证据引用，不是运行程序所需的路径。

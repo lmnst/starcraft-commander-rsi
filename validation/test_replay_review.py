@@ -11,6 +11,85 @@ from replay_review import ReplayReview
 
 
 class ReviewTests(unittest.TestCase):
+    def test_v17_physical_keys_preserve_v16_history(self):
+        base={"event":"command","schema":6,"keymap":"toprow_commands_v17","mode":"all","status":"applied","modifier":"none"}
+        model=self.model([
+            dict(base,frame=0,key="9",action="retreat",task_id=1),
+            dict(base,frame=10,key="0",action="defend",task_id=2),
+            dict(base,frame=20,key="-",action="restore_auto",status="auto_restored"),
+            dict(base,frame=30,key="8",modifier="alt",keymap="tenkeys_main_area_v16",action="retreat",task_id=3),
+            dict(base,frame=40,key="9",keymap="tenkeys_main_area_v16",action="defend",task_id=4),
+            dict(base,frame=50,key="0",keymap="tenkeys_main_area_v16",action="restore_auto",status="auto_restored")])
+        for index,key,label in ((0,"9","安全撤离集结"),(1,"0","全军回防"),(2,"-","全局重置"),(3,"Alt+8","安全撤离集结"),(4,"9","全军回防"),(5,"0","全局重置")):
+            title=model.describe_command(index,60)['title']
+            self.assertIn(key+" ·",title)
+            self.assertIn(label,title)
+
+    def test_v16_area_assault_completion_preserves_old6(self):
+        common={"event":"command","schema":6,"mode":"all","status":"applied","key":"6","action":"attack"}
+        model=self.model([
+            dict(common,frame=0,keymap="tenkeys_main_area_v16",task_id=1),
+            {"event":"battle_state","frame":5,"task_id":1,"phase":"main_outer_pylon","units":[1],"raid_policy":"main_area_outer_first_v1","main_known_buildings":3,"main_unchecked":7},
+            {"event":"building_complete","frame":15,"task_id":1,"reason":"main_area_cleared"},
+            {"event":"battle_state","frame":16,"task_id":1,"phase":"rally_waiting","units":[1],"raid_policy":"main_area_outer_first_v1","auto_withdrawal":True,"main_known_buildings":0,"main_unchecked":0},
+            dict(common,frame=30,keymap="tenkeys_local_combat_v15",task_id=2)])
+        self.assertIn("主基地区域清场",model.describe_command(0,6)['title'])
+        self.assertIn("外围水晶",model.describe_command(0,6)['effect'])
+        self.assertIn("主基地区域已确认清完",model.describe_command(0,20)['effect'])
+        self.assertIn("进攻主基地",model.describe_command(1,35)['title'])
+
+    def test_v15_reanchored_guard_shared_refuge_and_alt8(self):
+        base={"event":"command","schema":6,"keymap":"tenkeys_local_combat_v15","mode":"all","status":"applied"}
+        model=self.model([
+            dict(base,frame=0,key="7",action="clear_enemies",task_id=1,clear_policy="local_guard_v4"),
+            dict(base,frame=10,key="7",action="clear_enemies",task_id=1,clear_policy="local_guard_v4",status="patrol_reanchored"),
+            {"event":"battle_state","frame":12,"task_id":1,"phase":"detection_skirmishing","units":[1]},
+            {"event":"detection_skirmish","frame":13,"task_id":1,"unit_id":1},
+            dict(base,frame=20,key="8",action="rally",task_id=2,assembly_policy="shared_local_refuge_v2"),
+            {"event":"battle_state","frame":22,"task_id":2,"phase":"assembly_shared_refuge","units":[1],"assembly_policy":"shared_local_refuge_v2"},
+            dict(base,frame=30,key="8",modifier="alt",action="retreat",task_id=3)])
+        guard=model.describe_command(1,18)
+        self.assertIn("警戒位置已更新",guard['title'])
+        self.assertIn("不受旧区域限制",guard['effect'])
+        self.assertIn("安全交战",guard['effect'])
+        self.assertIn("同一避险点",model.describe_command(2,25)['effect'])
+        self.assertIn("安全撤离集结",model.describe_command(3,35)['title'])
+
+    def test_v14_stationary_and_alt8_withdrawal_keep_old8_history(self):
+        base={"event":"command","schema":6,"keymap":"tenkeys_assembly_v14","mode":"all","status":"applied","key":"8"}
+        model=self.model([
+            dict(base,frame=0,action="rally",task_id=1,modifier="none",assembly_policy="fixed_front_wait_v1"),
+            {"event":"battle_state","frame":10,"task_id":1,"action":"rally","phase":"assembly_waiting","units":[1,2],"assembly_policy":"fixed_front_wait_v1"},
+            dict(base,frame=20,action="retreat",task_id=2,modifier="alt",rendezvous_policy="shared_safe_point_v1"),
+            {"event":"battle_state","frame":30,"task_id":2,"action":"retreat","phase":"rally_waiting","units":[1,2],"rendezvous_policy":"shared_safe_point_v1"},
+            dict(base,frame=40,keymap="tenkeys_detection_v13",action="retreat",task_id=3),
+        ])
+        stationary=model.describe_command(0,15)
+        self.assertIn("8 · 全队 · 原地集结",stationary["title"])
+        self.assertIn("前线守位",stationary["effect"])
+        self.assertNotIn("前线先脱战",stationary["effect"])
+        retreat=model.describe_command(1,35)
+        self.assertIn("Alt+8",retreat["title"])
+        self.assertIn("安全撤离集结",retreat["title"])
+        self.assertIn("前线先脱战",retreat["effect"])
+        self.assertIn("安全集结",model.describe_command(2,45)["title"])
+
+    def test_v13_detection_pause_resumes_original_task_and_preserves_v12(self):
+        common={"event":"command","schema":6,"keymap":"tenkeys_detection_v13","mode":"all","status":"applied"}
+        model=self.model([
+            dict(common,frame=0,key="6",action="attack",task_id=1),
+            {"event":"battle_state","frame":10,"task_id":1,"action":"attack","phase":"evading_cloak","units":[1,2]},
+            {"event":"battle_state","frame":20,"task_id":1,"action":"attack","phase":"waiting_detection","units":[1,2]},
+            {"event":"battle_state","frame":30,"task_id":1,"action":"attack","phase":"engaging","units":[1,2]},
+            dict(common,frame=40,key="7",action="clear_enemies",task_id=2,clear_policy="persistent_guard_v3"),
+            {"event":"battle_state","frame":50,"task_id":2,"action":"clear_enemies","phase":"waiting_detection","units":[1,2]}])
+        self.assertIn("进攻主基地",model.describe_command(0,10)["title"])
+        self.assertIn("局部避让",model.describe_command(0,10)["effect"])
+        self.assertIn("等待反隐",model.describe_command(0,20)["effect"])
+        self.assertIn("正在交战",model.describe_command(0,30)["effect"])
+        self.assertIn("持续区域警戒",model.describe_command(1,50)["title"])
+        self.assertIn("等待反隐",model.describe_command(1,50)["effect"])
+
     def test_v12_continuous_combat_and_confirmed_task_keep_history(self):
         common={"event":"command","schema":6,"keymap":"tenkeys_combat_v12","mode":"all","status":"applied"}
         model=self.model([

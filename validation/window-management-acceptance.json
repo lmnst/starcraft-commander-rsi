@@ -1,0 +1,85 @@
+{
+  "passed": true,
+  "policy": "isolated_opponent_focus_v1",
+  "capture": false,
+  "checks": {
+    "fullscreen_fault_recovery": {
+      "peer_hidden_and_self_focus_restored": true,
+      "small_cursor_clip_repaired": true,
+      "resized_window_restored_to_monitor": true,
+      "other_application_kept_focus": true,
+      "mouse_reached_full_viewport": [
+        2323,
+        1576
+      ],
+      "physical_monitor": [
+        0,
+        0,
+        2560,
+        1600
+      ]
+    },
+    "windowed_mode": {
+      "original_client_size": [
+        960,
+        720
+      ],
+      "peer_hidden": true,
+      "not_forced_fullscreen": true
+    },
+    "actual_mouse_and_keys": {
+      "physical_edge_scroll_pointer": [
+        215,
+        800
+      ],
+      "before_game_camera": [
+        1792,
+        3600
+      ],
+      "after_game_camera": [
+        0,
+        3600
+      ],
+      "native_8_and_alt8_received": true
+    }
+  },
+  "runs": {
+    "fullscreen": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-213918-086818",
+      "end_frame": 3001,
+      "both_delegate_return_frames": [
+        2880,
+        3000
+      ],
+      "queue_full_events": 0,
+      "native_crashes": 0
+    },
+    "windowed": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-214107-426932",
+      "end_frame": 1201,
+      "both_delegate_return_frames": [
+        1080,
+        1200
+      ],
+      "queue_full_events": 0,
+      "native_crashes": 0
+    },
+    "pointer": {
+      "path": "E:\\StarCraft_llmteam\\commander_desktop\\validation\\20261117-215207-515441",
+      "end_frame": 1201,
+      "both_delegate_return_frames": [
+        1080,
+        1200
+      ],
+      "queue_full_events": 0,
+      "native_crashes": 0
+    }
+  },
+  "source_sha256": {
+    "app/match_windows.py": "78e177fd5124efa94517429165f9fda2ccf67b0d394672aa953acf4564f9244d",
+    "app/matches.py": "93111b2d728ca9acc5f583eab084172b5e708bd94bbe7afea1aa5528afcd43c6"
+  },
+  "frozen_baseline_source_sha256": "8ef8ae16cf2f0bbc474b8b2b4cbc23ad7239a3ab1a6551c58a397e4a438fca00",
+  "frozen_baseline_dll_sha256": "4528078cda6d98d202559aea4d9fbf6e401c64c15fb2703b6a8de38f1a54e468",
+  "unchanged_gameplay_dll_sha256": "13c9747055685fabef1357a8c73072f8d7f16e73859b3cdd8c030c6b4c9139ad"
+}
