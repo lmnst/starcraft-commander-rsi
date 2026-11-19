@@ -1,19 +1,19 @@
 # 星际指挥台
 
-Windows 本地对战与完整原生回放工具，当前为 **上排按键 v17（2026-11-19）**。
+Windows 本地对战与原生回放工具，支持键盘指挥、全场／我方视角回放和逐条指令复盘。
 
-**[下载 Windows x64 运行包](https://github.com/zyd-go/starcraft-commander-demo/releases/download/v17-20261119/StarCraft-Commander-v17-Windows-x64.zip)** · [所有发布版本](https://github.com/zyd-go/starcraft-commander-demo/releases)
+**[下载 Windows x64 运行包](https://github.com/zyd-go/starcraft-commander-demo/releases/download/v17-20261119/StarCraft-Commander-v17-Windows-x64.zip)**
 
-运行包自带 Python/Tk、Java、指挥层、回放层、固定版本对手和必要运行组件，**不包含游戏本体，也不包含任何具体对局录像或视频**。下载者需已有 **StarCraft: Brood War 1.16.1**；重制版和其他版本不适用。
+运行包自带 Python/Tk、Java、对手 Bot 和运行组件，**不含游戏本体及具体对局录像／视频**。需已安装 **StarCraft: Brood War 1.16.1**，不支持重制版。
 
 ## 下载后使用
 
-1. 下载上方运行包，完整解压到可写目录；不要只取出 exe。
-2. 双击 `星际指挥台.exe`。首次启动会尝试识别游戏；未识别时选择包含 `StarCraft.exe` 的 1.16.1 安装目录。更换目录时删除本机local.settings.json后重新选择。
-3. 选择地图和对手，开始单局对战；结束后保留战绩，点击 OK 返回历史对局。
-4. 本机产生的历史对局支持全场／我方回放；复制已有对局时请整体保留原对局目录。
+1. 下载运行包，完整解压到可写目录。
+2. 双击 `星际指挥台.exe`；未自动识别游戏时，选择包含 `StarCraft.exe` 的 1.16.1 安装目录。
+3. 选择地图和对手开始对战；结束后查看战绩，点击 OK 返回历史对局。
+4. 在历史对局中选择全场／我方回放。迁移对局时，请复制完整对局目录。
 
-GitHub 的 Code → Download ZIP 是源码包，不是上方的可执行运行包。Windows 可能对未签名程序显示安全提示；此项目没有代码签名。Skynet 使用旧版 BWAPI，若其旧版 CRT 缺失，需要安装 Microsoft Visual C++ 2008 x86 运行库；其他对手不使用这项旧依赖。已知组合的兼容性见 `validation/compatibility.json`。
+GitHub 的 Code → Download ZIP 是源码包，直接游玩请下载上方运行包。Skynet 可能需要另装 Microsoft Visual C++ 2008 x86 运行库；已知兼容性见 `validation/compatibility.json`。
 
 ## 当前按键
 
@@ -25,34 +25,33 @@ GitHub 的 Code → Download ZIP 是源码包，不是上方的可执行运行�
 | 2 | 强制采矿：探机不追敌，保留采气和建造，新探机自动纳入 |
 | 3 | 动态小队：约健康兵力四分之一，自动补兵，至少留6名健康兵回防 |
 | 4 | 选择全队范围，保留当前任务 |
-| 5 | 进攻近敌／分矿建筑，沿途先打敌军和炮台，再继续原建筑目标 |
+| 5 | 进攻近敌／分矿建筑，沿途先打敌军和炮台，完成后安全集结 |
 | 6 | 主基地区域清场：敌军、炮台优先，从外围水晶等建筑逐步推进，清完后安全集结 |
 | 7 | 持续就近警戒，敌军再现自动接战；忽略探机，再按7更新警戒位置 |
 | 8 | 原地集结等援兵：前线守位、后方赶来，受压共同局部避险，安全后归位 |
-| 9 | 安全撤离集结：先脱险，再到共同安全点等候（原Alt+8） |
+| 9 | 安全撤离集结：先脱险，再到共同安全点等候 |
 | 0 | 全军回防，分守基地，不被探机引走；保留采矿锁 |
 | - | 全局重置，解除采矿锁和人工任务，交回原始 Bot |
 
-5～9按当前小队／全队范围执行，0始终接管全军回防。5／6目标完成后安全撤离待命；重复5／6保留原任务和集火，重复7更新警戒位置。观察者跟随实际前线，5／6／7遇未侦测隐刀时局部避险或等反隐，到位后继续原任务。新局记录v17实际键位，旧回放仍按各自版本解释。
+5～9按所选小队／全队范围执行，0始终全军回防。重复5／6保留任务和集火，重复7更新警戒位置。观察者跟随前线；5／6／7遇未侦测隐刀时局部避险或等反隐，到位后继续原任务。旧回放按对局当时的键位解释。
 
 ## 完整回放功能
 
-- 原版游戏播放 `.rep`，保留游戏声音；全场视角和有身份记录的我方视角。
-- 暂停、恢复、倍速、时间定位、前后定位、结束后重播。
-- 按人工指令逐条准确定位并暂停；同帧多条指令仍可分别查看。
-- 右侧复盘栏显示当前指令、接收结果、执行阶段、部队与经济，以及最近记录；随游戏帧同步。
-- 自由镜头、小地图定位、回放边缘滚屏抑制；游戏在左、复盘在右，控制条可在底部／右侧切换。
-- 恢复对局的原始显示范围、双方颜色及机器人身份；旧局继续按其实际键位和版本解释。
-- 历史列表显示胜利／失败，支持打开目录、刷新及经确认后删除关联回放与记录。
+- 原生播放 `.rep` 并保留声音，支持全场／我方视角。
+- 暂停、倍速、前后定位、重播，以及逐条人工指令跳转并暂停。
+- 复盘侧栏同步显示指令、执行阶段、部队、经济和最近记录。
+- 自由镜头、小地图定位、边缘滚屏抑制，控制条可在底部／右侧切换。
+- 恢复原对局的显示范围、双方颜色和 Bot 身份。
+- 历史列表显示胜利／失败，支持打开目录、刷新和确认后删除。
 
-单独的 `.rep` 可以全场播放，但不能凭空还原未保存的人工按键、我方身份或历史镜头。复制我方回放时保留 `.rep.json`；旧的真实镜头回放还需要 `.rep.camera.jsonl`。逐条按键复盘还需原来的 `match.json` 和 `bwapi-data/write/commander-layer.jsonl`，建议整体复制那一局目录。运行包不预装他人的对局媒体。
+单独的 `.rep` 可全场播放。我方视角需保留 `.rep.json`，旧的真实镜头还需 `.rep.camera.jsonl`；按键复盘需 `match.json` 和 `bwapi-data/write/commander-layer.jsonl`。建议整体保留对局目录。
 
 ## 源码和验证
 
-完整操作说明见 [使用说明](使用说明.md)，源码环境和重建方式见 [本地运行与打包](docs/LOCAL_SETUP.md)，验证记录见 [验证说明](docs/VERIFICATION.md)。
+详细操作见 [使用说明](使用说明.md)，环境与重建见 [本地运行与打包](docs/LOCAL_SETUP.md)，测试记录见 [验证说明](docs/VERIFICATION.md)。
 
-人工指挥、回放和联机适配分别位于 `app/CommanderLayer.cpp`、`app/ReplayControl.cpp`、`vendor/local-pc-transport/SNP/`。Python前端及所有回放辅助模块均在 `app/`。原始基线 `v6-fix-r1-20261110` 保持冻结，校验值见 `baseline/manifest.json`；基线源码 [baseline/Bot.cpp](baseline/Bot.cpp) 和冻结DLL [baseline/Baseline.dll](baseline/Baseline.dll) 均已附在仓库内，也包含在Release运行包中；第三方运行环境使用Release包。
+指挥与回放源码在 `app/`，联机适配在 `vendor/local-pc-transport/SNP/`。冻结基线 [Bot.cpp](baseline/Bot.cpp) 和 [Baseline.dll](baseline/Baseline.dll) 随仓库及运行包提供，校验值见 `baseline/manifest.json`。
 
-测试默认只读取日志、游戏状态、单位坐标、血盾和帧号；构建保持 `COMMANDER_ENABLE_SCREEN_CAPTURE=OFF`。v13～v17的反隐、集结、警戒、窗口管理和主基地区域清场沿用本机已验证实现；v17另有真实Windows按键消息验证及旧版回放回归，见 [验证说明](docs/VERIFICATION.md)。
+测试只读取日志和游戏数据，构建保持 `COMMANDER_ENABLE_SCREEN_CAPTURE=OFF`，不截图录屏。
 
 游戏、BWAPI、BWEM、cnc-ddraw、Java及第三方Bot的权利和许可属于各自作者，参见 [第三方说明](THIRD_PARTY.md)。
