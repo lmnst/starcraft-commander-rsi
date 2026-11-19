@@ -2,7 +2,7 @@
 
 Windows 本地对战与原生回放工具，支持键盘指挥、全场／我方视角回放和逐条指令复盘。
 
-**[下载 Windows x64 运行包](https://github.com/zyd-go/starcraft-commander-demo/releases/download/v17-20261119/StarCraft-Commander-v17-Windows-x64.zip)**
+**[下载 Windows x64 运行包](https://github.com/zyd-go/starcraft-commander/releases/download/v17-20261119/StarCraft-Commander-v17-Windows-x64.zip)**
 
 运行包自带 Python/Tk、Java、对手 Bot 和运行组件，**不含游戏本体及具体对局录像／视频**。需已安装 **StarCraft: Brood War 1.16.1**，不支持重制版。
 

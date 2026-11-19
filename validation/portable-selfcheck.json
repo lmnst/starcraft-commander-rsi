@@ -1,7 +1,7 @@
 {
   "passed": true,
   "capture": false,
-  "root": "E:\\StarCraft_llmteam\\starcraft-commander-demo\\dist\\StarCraft-Commander",
+  "root": ".",
   "game": "E:\\StarCraftAI\\StarCraft1161",
   "native_files": {
     "build/CommanderLayer.dll": "75912dd363a5d9c003884437a8db253f2fc97425a365a468e1d1ba5abbd9cf8a",
@@ -28,5 +28,6 @@
     "replay_perspective",
     "replay_layout",
     "replay_delete"
-  ]
+  ],
+  "path_base": "release_directory"
 }

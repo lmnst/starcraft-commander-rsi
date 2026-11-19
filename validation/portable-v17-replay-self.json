@@ -1,7 +1,7 @@
 {
   "passed": true,
   "capture": false,
-  "root": "E:\\StarCraft_llmteam\\starcraft-commander-demo\\build\\v17-release-verification\\StarCraft-Commander",
+  "root": ".",
   "game": "E:\\StarCraftAI\\StarCraft1161",
   "native_files": {
     "build/CommanderLayer.dll": "266a6a96b0f792ebad689e93b3610688f2b7b2898e45a05b3fb79da40d84b129",
@@ -38,5 +38,6 @@
       "frame": 190
     }
   ],
-  "playback": "E:\\StarCraft_llmteam\\starcraft-commander-demo\\build\\v17-release-verification\\StarCraft-Commander\\playback\\20261119-134630-236515"
+  "playback": "playback/20261119-134630-236515",
+  "path_base": "release_directory"
 }
