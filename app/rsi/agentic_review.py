@@ -149,11 +149,20 @@ def _sample(rows, limit):
 
 
 def _build_log(path):
-    """Rows of the production bot's own trace that carry a frame; the bot writes only own-side state."""
+    """Rows of the production bot's own trace that carry a frame; skips malformed lines safely."""
     if not path.is_file():
         return []
-    rows = (json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip())
-    return [row for row in rows if type(row.get("frame")) is int]
+    out = []
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(row, dict) and type(row.get("frame")) is int:
+            out.append(row)
+    return out
 
 
 def agent_prompt(prompt):
@@ -454,10 +463,15 @@ class AgenticReviewClient:
 
     @staticmethod
     def _trace(path, turn, message, results):
+        thinking = message.get("reasoning_content")
+        if thinking is None and isinstance(message.get("provider_specific_fields"), dict):
+            thinking = message["provider_specific_fields"].get("thinking_blocks")
         row = {"turn": turn, "content": message.get("content"),
                "tool_calls": [{"name": call["function"]["name"], "arguments": call["function"].get("arguments")}
                               for call in message.get("tool_calls") or []],
                "results": results}
+        if thinking:
+            row["thinking"] = thinking
         with path.open("a", encoding="utf-8") as stream:
             stream.write(json.dumps(row, ensure_ascii=False) + "\n")
 

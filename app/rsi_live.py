@@ -15,7 +15,7 @@ if __package__ in {None, ""}:
     # Keep this entry point runnable from both the CLI and unittest imports.
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.rsi import build_config
+from app.rsi import build_config, v2_loop
 from app.rsi.adapter import DEFAULT_MATCH_TIMEOUT, DEFAULT_SPEED, NativeV17Adapter
 from app.rsi.adjudication import MAP_STARTS
 from app.rsi.agentic_review import AgenticReviewClient
@@ -70,6 +70,8 @@ def _parser():
                         help="live reasoning effort. Use omit if the HTTP endpoint does not accept it")
     parser.add_argument("--review-mode", choices=("single", "agentic"), default="single",
                         help="agentic lets the reviewer investigate through L0 tools (HTTP backend only)")
+    parser.add_argument("--evolution-mode", choices=("v1", "v2"), default="v1",
+                        help="v2 enables evolvable MacroBot.cpp + Champion/Challenger L0 selection")
     parser.add_argument("--review-reasoning-effort", default="medium",
                         help="review reasoning effort. Use omit if the HTTP endpoint does not accept it")
     parser.add_argument("--codex-executable", default="codex")
@@ -406,6 +408,11 @@ def main(argv=None):
         parser.error("--offline-evolve-test reviews one archive in one round")
     if args.review_mode == "agentic" and (args.backend != "openai" or args.offline_candidate_experiment):
         parser.error("--review-mode agentic requires --backend openai and no candidate experiment")
+    if args.evolution_mode == "v2":
+        if args.backend != "openai" or args.offline_evolve_test or args.offline_candidate_experiment:
+            parser.error("--evolution-mode v2 requires live --backend openai")
+        if "PurpleWave" in _opponents(args):
+            parser.error("--evolution-mode v2 forbids PurpleWave in the core opponent pool")
     if args.offline_candidate_experiment and (not args.offline_evolve_test or args.no_evolve):
         parser.error("--offline-candidate-experiment requires offline review with evolution enabled")
     if args.offline_evolve_test is None:
@@ -425,10 +432,18 @@ def main(argv=None):
     batch = (args.batch_dir or ROOT / "matches/rsi" / datetime.now().strftime("%Y%m%d-%H%M%S-%f")).resolve()
     settings = {name: str(value) if isinstance(value, Path) else value for name, value in vars(args).items()
                 if name != "batch_dir"}
-    initialize_batch(batch, args.seed_version, settings)
-    print(batch, flush=True)
+    if args.evolution_mode == "v2":
+        settings["core_opponents"] = _opponents(args)
+    else:
+        initialize_batch(batch, args.seed_version, settings)
+        print(batch, flush=True)
     circuit = ModelCircuit()
-    if args.offline_candidate_experiment:
+    if args.evolution_mode == "v2":
+        reviewer = v2_loop.V2AgenticReviewClient(
+            args.review_model, args.review_reasoning_effort, args.endpoint,
+            args.review_timeout, api_key=_api_key(args), circuit=circuit,
+        )
+    elif args.offline_candidate_experiment:
         reviewer = CandidateExperimentClient(args.backend, args.review_model, args.review_reasoning_effort,
                                              args.endpoint, args.review_timeout, api_key=_api_key(args),
                                              codex_executable=args.codex_executable, circuit=circuit)
@@ -450,10 +465,15 @@ def main(argv=None):
         clients = {"live": live} if args.no_evolve else {"live": live, "review": review_check}
         # Held for the whole batch: the desktop app and other batches cannot start a game meanwhile.
         with matches.game_lock():
+            if args.evolution_mode == "v2":
+                v2_loop.initialize_v2_batch(batch, ROOT, settings)
+                print(batch, flush=True)
             if not _preflight(batch, clients):
                 _stop_batch(batch, "preflight_failed")
                 print(f"model preflight failed; see {batch / 'preflight.json'}", flush=True)
                 return 1
+            if args.evolution_mode == "v2":
+                return v2_loop.run_v2_live(args, batch, ROOT, live, reviewer, stop_event)
             return _run_live(args, batch, live, reviewer, stop_event)
     finally:
         signal.signal(signal.SIGINT, previous_handler)

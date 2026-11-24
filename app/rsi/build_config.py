@@ -98,14 +98,14 @@ def parse(text):
     return config
 
 
-def check_edit(before, after):
-    """Gate a review edit: valid schema and at most MAX_CHANGED_KEYS values changed. Returns the changes."""
+def check_edit(before, after, *, max_changed_keys=MAX_CHANGED_KEYS):
+    """Gate a review edit: valid schema and at most max_changed_keys values changed. Returns the changes."""
     old, new = parse(before), parse(after)
     changed = {name: [old[name], new[name]] for name in SCHEMA if old[name] != new[name]}
     if not changed:
         raise ValueError(f"{FILENAME}: no value changed")
-    if len(changed) > MAX_CHANGED_KEYS:
-        raise ValueError(f"{FILENAME}: changed {len(changed)} keys, limit is {MAX_CHANGED_KEYS} per round")
+    if len(changed) > max_changed_keys:
+        raise ValueError(f"{FILENAME}: changed {len(changed)} keys, limit is {max_changed_keys} per round")
     return changed
 
 

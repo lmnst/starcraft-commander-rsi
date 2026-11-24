@@ -17,6 +17,7 @@ SUPPORT = {"Pylon", "Assimilator", "Photon Cannon", "Shield Battery", *BASES, *P
 HOME_RADIUS = 768
 ENEMY_RADIUS = 768
 ECONOMY_WINDOW = 1200
+RECENT_PEAK_WINDOW = 3600
 MAX_BUILDINGS = 20
 TASK_FIELDS = ("task_id", "scope", "action", "phase", "goal", "arrived")
 
@@ -81,6 +82,15 @@ def build_situation(raw, memory):
                                "types": _count(map(_name, enemy_army)), "center": _center(enemy_army)}
         if len(enemy_army) > memory.get("peak_army", {}).get("count", 0):
             memory["peak_army"] = {"frame": frame, "count": len(enemy_army)}
+        recent_list = memory.setdefault("recent_army_counts", [])
+        recent_list.append([frame, len(enemy_army)])
+    recent_list = [row for row in memory.get("recent_army_counts", []) if row[0] >= frame - RECENT_PEAK_WINDOW]
+    memory["recent_army_counts"] = recent_list
+    recent_peak = (
+        {"frame": max(recent_list, key=lambda r: (r[1], r[0]))[0],
+         "count": max(r[1] for r in recent_list)}
+        if recent_list else None
+    )
 
     bases = raw.get("own_base_positions", [])
     enemy_positions = [[x, y] for _, x, y, _ in remembered.values()]
@@ -146,6 +156,7 @@ def build_situation(raw, memory):
                                 for name, x, y, last in buildings],
             "last_army": memory.get("last_army"),
             "peak_army": memory.get("peak_army"),
+            "recent_peak_army": recent_peak,
         },
         "defense": {
             "stance": stance,
@@ -154,6 +165,7 @@ def build_situation(raw, memory):
             "frames_since_enemy_near_base": frame - memory.get("last_enemy_near_base", memory["first_frame"]),
         },
         "tasks": [{name: task[name] for name in TASK_FIELDS if name in task} for task in raw.get("tasks", [])],
+        **({"meta": {"opponent": raw["opponent"]}} if raw.get("opponent") else {}),
     }
 
 

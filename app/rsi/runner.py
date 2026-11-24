@@ -74,16 +74,19 @@ def compact_receipt(receipt):
 
 
 def decision_payload(policy_version, strategy, summary, trigger, enemy_main, main_defense_locked, tools,
-                     active_tool, recent_decisions, latest_receipt, opponent=None):
+                     active_tool, recent_decisions, latest_receipt, opponent=None, build_config_summary=None):
     # The opponent's name is known before the game, so strategy notes about a bot can be applied.
-    return {"policy_version": policy_version, "opponent": opponent, "strategy": strategy, "summary": summary,
-            "trigger": trigger,
-            "enemy_main": enemy_main, "main_defense_locked": main_defense_locked,
-            "available_keys": {key: description for key, (_, description) in BASE_PRIMITIVES.items()},
-            "available_tools": {name: {key: value for key, value in tool.items() if key != "step"}
-                                for name, tool in tools.items()},
-            "active_tool": active_tool, "recent_decisions": recent_decisions,
-            "latest_receipt": compact_receipt(latest_receipt)}
+    payload = {"policy_version": policy_version, "opponent": opponent, "strategy": strategy, "summary": summary,
+               "trigger": trigger,
+               "enemy_main": enemy_main, "main_defense_locked": main_defense_locked,
+               "available_keys": {key: description for key, (_, description) in BASE_PRIMITIVES.items()},
+               "available_tools": {name: {key: value for key, value in tool.items() if key != "step"}
+                                   for name, tool in tools.items()},
+               "active_tool": active_tool, "recent_decisions": recent_decisions,
+               "latest_receipt": compact_receipt(latest_receipt)}
+    if build_config_summary is not None:
+        payload["build_config"] = build_config_summary
+    return payload
 
 
 @dataclass
@@ -133,7 +136,9 @@ class _ForceMetrics:
 
 class LiveRunner:
     def __init__(self, adapter, model_client, version_dir, run_dir, *, max_frames=MAX_FRAMES,
-                 stalemate_zero_frames=STALEMATE_ZERO_FRAMES, stop_requested=None, clock=time.monotonic):
+                 stalemate_zero_frames=STALEMATE_ZERO_FRAMES, stop_requested=None, clock=time.monotonic,
+                 max_strategy_chars=2000, stamp_opponent=False, build_config_summary=None,
+                 frame_stall_seconds=None):
         if max_frames <= 0 or stalemate_zero_frames <= 0:
             raise ValueError("frame limits must be positive")
         self.adapter = adapter
@@ -144,6 +149,10 @@ class LiveRunner:
         self.stalemate_zero_frames = stalemate_zero_frames
         self.clock = clock
         self.stop_requested = stop_requested
+        self.max_strategy_chars = max_strategy_chars
+        self.stamp_opponent = stamp_opponent
+        self.build_config_summary = build_config_summary
+        self.frame_stall_seconds = frame_stall_seconds
         self.speed = getattr(adapter, "speed", DEFAULT_SPEED)
         self.max_wall_seconds = getattr(adapter, "match_timeout", DEFAULT_MATCH_TIMEOUT)
         self.max_lag_frames = MAX_AGE_SECONDS * 1000 // self.speed
@@ -183,8 +192,8 @@ class LiveRunner:
     def run(self):
         started_at = self.clock()
         self.strategy = (self.version_dir / "strategy.md").read_text(encoding="utf-8")
-        if len(self.strategy) > 2000:
-            raise ValueError("active strategy exceeds 2000 characters")
+        if len(self.strategy) > self.max_strategy_chars:
+            raise ValueError(f"active strategy exceeds {self.max_strategy_chars} characters")
         try:
             self.policy = load_version(self.version_dir)
         except Exception as error:
@@ -240,12 +249,17 @@ class LiveRunner:
                     "required_frames": STALEMATE_ONE_ARMY_FRAMES,
                     "observed_frames": self.frame - self.one_army_or_less_since,
                 }
+            elif reason == "frame_stall":
+                self.cutoff_record["state"] = "error"
+                result["error"] = f"frame_stall: no new observations for {self.cutoff_record.get('stall_seconds')}s"
             result = {**result, "state": self.cutoff_record["state"], "winner": None,
                       "natural_outcome": "unknown", "cutoff": self.cutoff_record}
             write_json(self.run_dir / "cutoff.json", self.cutoff_record)
+        play_seconds = round(self.clock() - self.play_started_at, 3) if self.play_started_at is not None else None
         result = {
             **result, "run": self.run_dir.name, "policy_version": self.version_dir.name,
-            "seconds": round(self.clock() - started_at, 3), "decision_sources": self.decision_sources,
+            "seconds": round(self.clock() - started_at, 3), "play_seconds": play_seconds,
+            "decision_sources": self.decision_sources,
             "tokens": self.tokens, "usage_missing": self.usage_missing,
             "runtime_error_count": len(self.runtime_errors),
             **self._live_model_health(),
@@ -354,6 +368,10 @@ class LiveRunner:
             self.play_started_at = now
         if self.cutoff_record is not None or self._check_interrupts(now):
             return
+        if (self.frame_stall_seconds and self.observed_at is not None
+                and now - self.observed_at >= self.frame_stall_seconds):
+            self._request_cutoff("frame_stall", now, stall_seconds=round(now - self.observed_at, 3))
+            return
         if now - self.play_started_at >= self.max_wall_seconds:
             self._request_cutoff("max_wall_seconds", now, limit_seconds=self.max_wall_seconds)
 
@@ -361,6 +379,8 @@ class LiveRunner:
         if self.cutoff_record or (self.frame is not None and raw["frame"] <= self.frame):
             return
         raw = deepcopy(raw)
+        if self.stamp_opponent and getattr(self.adapter, "opponent_name", None):
+            raw["opponent"] = self.adapter.opponent_name
         self.frame = raw["frame"]
         raw[situation.KEY] = situation.build_situation(raw, self.situation_memory)
         now = self.clock()
@@ -522,7 +542,8 @@ class LiveRunner:
         row = self._record("llm", "requested", trigger=trigger, call=archive.name)
         payload = decision_payload(self.version_dir.name, self.strategy, summary, trigger, self.enemy_main,
                                    raw.get("stance") == "defend", self.tools, active_tool, recent,
-                                   self.latest_receipt, getattr(self.adapter, "opponent_name", None))
+                                   self.latest_receipt, getattr(self.adapter, "opponent_name", None),
+                                   build_config_summary=self.build_config_summary)
         sent_at = self.clock()
         future = self.calls.submit(self.model_client.call, DECISION_PROMPT, deepcopy(payload), archive)
         self.request = (future, row, sent_at)

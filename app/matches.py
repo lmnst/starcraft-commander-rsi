@@ -76,9 +76,11 @@ def validate():
             verify(folder / "PurpleWave.jar", bot["payload_sha256"])
 
 def prepare(slot, map_name, room, speed, control, opponent=None, fullscreen=True, replay=None,
-            opponent_hosts=False, replay_size=None, render_profile="standard", build_config=None):
-    """build_config: text of build_config.json. When given, the host runs MacroBot.dll with it
-    instead of the frozen Baseline.dll."""
+            opponent_hosts=False, replay_size=None, render_profile="standard", build_config=None,
+            delegate_dll=None):
+    """build_config: text of build_config.json. When given, the host runs MacroBot.dll (or delegate_dll)
+    with it instead of the frozen Baseline.dll."""
+    macro_dll = Path(delegate_dll) if delegate_dll is not None else MACROBOT
     host = opponent is None
     if render_profile not in VIEWPORTS:
         raise ValueError("未知视野设置。")
@@ -126,7 +128,7 @@ def prepare(slot, map_name, room, speed, control, opponent=None, fullscreen=True
         if build_config is None:
             shutil.copy2(ROOT / "baseline/Baseline.dll", slot / "bwapi-data/AI")
         else:
-            shutil.copy2(MACROBOT, slot / "bwapi-data/AI")
+            shutil.copy2(macro_dll, slot / "bwapi-data/AI" / macro_dll.name)
             (slot / "bwapi-data/AI/build_config.json").write_text(build_config, encoding="utf-8", newline="\n")
         shutil.copy2(ROOT / "build/CommanderLayer.dll", slot / "bwapi-data/AI")
         shutil.copy2(ROOT / "build/ResultsWatcher.dll", slot / "bwapi-data/AI")
@@ -206,7 +208,7 @@ def prepare(slot, map_name, room, speed, control, opponent=None, fullscreen=True
     if not host:
         env.update(COMMANDER_ROLE="opponent", COMMANDER_DELEGATE="bwapi-data/AI/" + entry_name(opponent))
     elif build_config is not None and not replay:
-        env["COMMANDER_DELEGATE"] = "bwapi-data/AI/" + MACROBOT.name
+        env["COMMANDER_DELEGATE"] = "bwapi-data/AI/" + macro_dll.name
     return env
 
 class GameProcesses:
@@ -282,7 +284,7 @@ def game_lock():
 def playing(run, map_name, opponent_name, control="human", speed=42, fullscreen=True,
             update=lambda value: None, smoke_frames=0, opponent_hosts=None, keep_results=None,
             render_profile="expanded", *, data_only=False, match_timeout=None, visible_telemetry=False,
-            hold_lock=True, build_config=None):
+            hold_lock=True, build_config=None, delegate_dll=None, stall_timeout=240):
     if keep_results is None:
         keep_results = not smoke_frames
     if opponent_hosts is None:
@@ -292,23 +294,24 @@ def playing(run, map_name, opponent_name, control="human", speed=42, fullscreen=
     with game_lock() if hold_lock else nullcontext():
         return run_match(run, map_name, opponent_name, control, speed, fullscreen, update,
                          smoke_frames, opponent_hosts, keep_results, render_profile, data_only, match_timeout,
-                         visible_telemetry, build_config)
+                         visible_telemetry, build_config, delegate_dll=delegate_dll, stall_timeout=stall_timeout)
 
 def run_match(run, map_name, opponent_name, control, speed, fullscreen, update, smoke_frames,
               opponent_hosts, keep_results, render_profile, data_only, match_timeout, visible_telemetry,
-              build_config=None):
+              build_config=None, *, delegate_dll=None, stall_timeout=240):
     from replay_info import save_match_labels
     from match_windows import MatchWindows, POLICY as WINDOW_POLICY
     windows = None
     games = GameProcesses()
     peers = GameProcesses()
+    macro_dll = Path(delegate_dll) if delegate_dll is not None else MACROBOT
     status = dict(map=map_name, opponent=opponent_name, baseline=BASELINE, baseline_sha256=BASELINE_HASH,
                   source_sha256=SOURCE_HASH, control=control, started_at=datetime.now().astimezone().isoformat(),
                   state="starting", opponent_hosts=opponent_hosts, self_replay_camera="free",
                   player_color_policy="self_blue_enemy_red_v1", render_profile=render_profile,
                   render_size=list(VIEWPORTS[render_profile]))
     if build_config is not None:
-        status.update(delegate=MACROBOT.stem, delegate_sha256=digest(MACROBOT),
+        status.update(delegate=macro_dll.stem, delegate_sha256=digest(macro_dll),
                       build_config=json.loads(build_config),
                       build_config_sha256=hashlib.sha256(build_config.encode("utf-8")).hexdigest())
 
@@ -325,7 +328,8 @@ def run_match(run, map_name, opponent_name, control, speed, fullscreen, update, 
         opponent = None if opponent_name == BUILTIN else OPPONENTS[opponent_name]
         room = "SC" + uuid.uuid4().hex[:10] if opponent else ""
         host_env = prepare(run, map_name, room, speed, control, fullscreen=fullscreen,
-                           opponent_hosts=opponent_hosts, render_profile=render_profile, build_config=build_config)
+                           opponent_hosts=opponent_hosts, render_profile=render_profile,
+                           build_config=build_config, delegate_dll=delegate_dll)
         host_env["COMMANDER_RESULTS_WATCH"] = "1" if keep_results else "0"
         if data_only:
             host_env["COMMANDER_DATA_ONLY"] = "1"
@@ -385,6 +389,9 @@ def run_match(run, map_name, opponent_name, control, speed, fullscreen, update, 
         store(run / "match.json", status)
         update("正在对战。结束后自动保存 .rep，并保留战绩统计页面供你查看。")
         play_deadline = time.monotonic() + (55 if smoke_frames else match_timeout or float("inf"))
+        telemetry_log = output / "commander-layer.jsonl"
+        last_telemetry_size = telemetry_log.stat().st_size if telemetry_log.is_file() else -1
+        last_telemetry_progress = time.monotonic()
         while host.poll() is None and not (end := read_json(end_file)):
             if windows.failure:
                 raise RuntimeError("窗口管理器异常："+windows.failure)
@@ -392,6 +399,13 @@ def run_match(run, map_name, opponent_name, control, speed, fullscreen, update, 
                 if smoke_frames:
                     raise RuntimeError("验证局未在预期时间内推进。")
                 raise TimeoutError("正式对局在时限内未自然结算。")
+            if visible_telemetry and not smoke_frames and stall_timeout:
+                cur_size = telemetry_log.stat().st_size if telemetry_log.is_file() else -1
+                if cur_size != last_telemetry_size:
+                    last_telemetry_size = cur_size
+                    last_telemetry_progress = time.monotonic()
+                elif time.monotonic() - last_telemetry_progress >= stall_timeout:
+                    raise RuntimeError(f"Native client stalled without telemetry progress for {stall_timeout}s")
             if opponent and guest.poll() is not None:
                 # A peer leaving can itself end the match. Give the host time to save.
                 for _ in range(50):
@@ -468,7 +482,17 @@ def run_match(run, map_name, opponent_name, control, speed, fullscreen, update, 
 def confirm_build_config(run, expected):
     """MacroBot writes config_loaded (or config_error) right after its start event."""
     trace = run / "bwapi-data/write/astra-trace.jsonl"
-    rows = [json.loads(line) for line in trace.read_text(encoding="utf-8").splitlines()[:4]] if trace.is_file() else []
+    rows = []
+    if trace.is_file():
+        for line in trace.read_text(encoding="utf-8", errors="replace").splitlines()[:20]:
+            if not line.strip():
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(row, dict):
+                rows.append(row)
     loaded = next((row for row in rows if row.get("event") in ("config_loaded", "config_error")), None)
     if not loaded or loaded["event"] != "config_loaded" or loaded.get("values") != expected:
         raise RuntimeError(f"MacroBot 未确认加载本局配置：{loaded}")
