@@ -12,7 +12,7 @@ from app.rsi.adjudication import map_enemy_start
 from app.rsi.evolution import initialize_batch, read_json, review_round
 from app.rsi.model_client import ModelCircuit, _decode, _provider_failure, _retry_hint, write_json
 from app.rsi.primitives import fallback_summarize
-from app.rsi_live import _parser, _preflight, _run_live
+from app.rsi_live import _next_wave, _parser, _preflight, _run_live
 
 
 # Error text recorded in matches/rsi/20261123-180332-804294/match-2 (decision-050 and decision-078).
@@ -147,6 +147,20 @@ class BatchTests(unittest.TestCase):
         self.assertEqual((code, sorted(played)), (0, [1, 2, 3, 4]))
         index = read_json(self.batch / "batch.json")
         self.assertEqual([round_["match_numbers"] for round_ in index["rounds"]], [[1, 2], [3, 4]])
+
+    def test_a_java_opponent_plays_its_wave_alone(self):
+        def waves(opponents, count=4, parallel=2):
+            args = _parser().parse_args(["--parallel", str(parallel), "--opponent", opponents])
+            pending, result = list(range(1, count + 1)), []
+            while pending:
+                wave, pending = _next_wave(args, pending)
+                result.append(wave)
+            return result
+
+        self.assertEqual(waves("Locutus,McRave"), [[1, 2], [3, 4]])
+        self.assertEqual(waves("PurpleWave,HladHammer"), [[1], [2], [3], [4]])
+        self.assertEqual(waves("HladHammer,PurpleWave,Locutus"), [[1], [2], [3, 4]])
+        self.assertEqual(waves("Locutus,McRave,PurpleWave", count=6, parallel=3), [[1, 2], [3], [4, 5], [6]])
 
     def test_single_match_error_does_not_stop_the_batch(self):
         code, played = self.run_batch(["error", "finished", "finished", "finished"])

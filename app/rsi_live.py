@@ -269,6 +269,26 @@ def _failed_pairs(map_name, opponents):
     return [name for name in opponents if (name, map_name) in failed]
 
 
+def _next_wave(args, pending):
+    """Split off up to --parallel matches to start together. A Java opponent plays alone.
+
+    JBWAPI joins the first instance in BWAPI's shared game table, and other bots' clients list
+    themselves there too. Next to another game, PurpleWave took over HladHammer's player in that
+    game while its own player stood idle (matches/rsi/20261124-153350-624112, matches 1 and 2).
+    """
+    roster = read_json(ROOT / "opponents/recorded-roster.json", [])
+    java = {bot["name"] for bot in roster if bot.get("kind") == "java"}
+    wave = []
+    for number in pending[:args.parallel]:
+        alone = _opponent_for(args, number) in java
+        if alone and wave:
+            break
+        wave.append(number)
+        if alone:
+            break
+    return wave, pending[len(wave):]
+
+
 def _play_one(args, batch, version, model, number, *, stop_requested=None):
     run = batch / f"match-{number}"
     started = monotonic()
@@ -333,7 +353,7 @@ def _run_live(args, batch, live_model, review_model, stop_event):
         while pending:
             if stop_event.is_set() or live_model.circuit.open or match_errors >= MAX_CONSECUTIVE_MATCH_ERRORS:
                 break
-            wave, pending = pending[:args.parallel], pending[args.parallel:]
+            wave, pending = _next_wave(args, pending)
             results = _play_wave(args, batch, version, live_model, wave, stop_event)
             for match in results:
                 matches.append(match)
