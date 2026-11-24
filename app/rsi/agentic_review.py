@@ -19,8 +19,10 @@ if __package__ in {None, ""}:
     # The analysis worker runs as an isolated script and needs only the sandbox.
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from rsi import sandbox
+    from rsi.seed_v1 import VERSION_FILES
 else:
-    from . import evolution, sandbox, situation, validator
+    from . import build_config, evolution, sandbox, situation, validator
+    from .seed_v1 import VERSION_FILES
     from .model_client import PROVIDER_FAILURES, USAGE_FIELDS, ModelCircuit, _provider_failure, write_json
 
 
@@ -30,6 +32,8 @@ ANALYSIS_TIMEOUT_SECONDS = 20
 TOOL_OUTPUT_CHARS = 10000
 FRAME_ROWS = 25
 TIMELINE_ROWS = 60
+BUILD_LOG_ROWS = 80
+BUILD_LOG = "bwapi-data/write/astra-trace.jsonl"
 SUBMIT_REJECTIONS = 3
 TRANSIENT_WAITS = (5, 15, 30)
 FRAME_FIELDS = ("frame", "workers", "army", "healthy_army", "mode", "stance", "main_task", "squad_task",
@@ -52,10 +56,12 @@ PROMPT_EDITS = (
 AGENT_PREAMBLE = """You investigate one round like an analyst, using tools. The first message holds the
 same facts, results and version history as a single-shot review. Use get_frames, get_timeline and
 run_analysis to test your leading explanation against the full observation stream before deciding.
-Each observation row carries situation, L0's side-visible digest. read_policy shows the active
+Each observation row carries situation, L0's side-visible digest. get_build_log shows what the
+production bot planned and when (build_plan, plan_end, detect_step, cloak_seen, cannon_skip,
+unit_complete, range_upgrade_started, and a state row every 240 frames). read_policy shows the active
 files. Work on one problem, keep changes small, and call submit when you are done.
 run_analysis code must define analyze(evidence) and return JSON-compatible data. evidence is
-{"matches": {"<number>": {"result", "observations", "timeline", "receipts", "runtime_errors"}},
+{"matches": {"<number>": {"result", "observations", "timeline", "receipts", "runtime_errors", "build_log"}},
 "facts", "version_history"}. It may import only math, collections, statistics, itertools,
 functools, copy, typing or dataclasses, and may not open files or use reflection.
 """
@@ -73,15 +79,21 @@ TOOLS = [
      "parameters": {"type": "object", "required": ["match_number", "start_frame", "end_frame"], "properties": {
          "match_number": {"type": "integer"}, "start_frame": {"type": "integer"},
          "end_frame": {"type": "integer"}}}},
+    {"name": "get_build_log",
+     "description": f"Production bot trace rows of one match between two frames, at most {BUILD_LOG_ROWS} rows. "
+                    "Optional events filters by event name.",
+     "parameters": {"type": "object", "required": ["match_number", "start_frame", "end_frame"], "properties": {
+         "match_number": {"type": "integer"}, "start_frame": {"type": "integer"}, "end_frame": {"type": "integer"},
+         "events": {"type": "array", "items": {"type": "string"}}}}},
     {"name": "run_analysis",
      "description": "Run restricted Python analyze(evidence) over every observation, timeline row and receipt.",
      "parameters": {"type": "object", "required": ["code"], "properties": {"code": {"type": "string"}}}},
     {"name": "read_policy", "description": "Read one whitelist file: the staged version if any, else the active one.",
      "parameters": {"type": "object", "required": ["file"], "properties": {
-         "file": {"type": "string", "enum": ["strategy.md", "observer.py", "tools.py", "rules.py"]}}}},
+         "file": {"type": "string", "enum": list(VERSION_FILES)}}}},
     {"name": "write_policy", "description": "Stage the complete new text of one whitelist file (at most 2 files).",
      "parameters": {"type": "object", "required": ["file", "content"], "properties": {
-         "file": {"type": "string", "enum": ["strategy.md", "observer.py", "tools.py", "rules.py"]},
+         "file": {"type": "string", "enum": list(VERSION_FILES)},
          "content": {"type": "string"}}}},
     {"name": "discard_policy", "description": "Drop a staged file.",
      "parameters": {"type": "object", "required": ["file"], "properties": {"file": {"type": "string"}}}},
@@ -97,7 +109,8 @@ TOOLS = [
              "diagnosis": {"type": "string"}, "hypothesis": {"type": "string"}, "expectation": {"type": "string"},
              "decision": {"type": "string", "enum": ["keep", "modify", "revert"]},
              "distillation_type": {"type": "string", "enum": sorted(
-                 ["none", "strategy_only", "add_observation", "add_tool", "distill_rule", "bugfix_code"])}}}},
+                 ["none", "strategy_only", "add_observation", "add_tool", "distill_rule", "bugfix_code",
+                  "tune_macro"])}}}},
 ]
 
 
@@ -135,6 +148,14 @@ def _sample(rows, limit):
     return [rows[index * (len(rows) - 1) // (limit - 1)] for index in range(limit)]
 
 
+def _build_log(path):
+    """Rows of the production bot's own trace that carry a frame; the bot writes only own-side state."""
+    if not path.is_file():
+        return []
+    rows = (json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip())
+    return [row for row in rows if type(row.get("frame")) is int]
+
+
 def agent_prompt(prompt):
     for old, new in PROMPT_EDITS:
         if old not in prompt:
@@ -164,6 +185,7 @@ class ReviewWorkspace:
                 "receipts": receipts if receipts is not None else [row["receipt"] for row in timeline
                                                                      if row.get("receipt")],
                 "runtime_errors": evolution.read_json(run / "runtime-errors.json", []),
+                "build_log": _build_log(run / BUILD_LOG),
             }
 
     def match(self, number):
@@ -178,7 +200,7 @@ class ReviewWorkspace:
             "first_frame": data["observations"][0]["frame"] if data["observations"] else None,
             "last_frame": data["observations"][-1]["frame"] if data["observations"] else None,
             "timeline_rows": len(data["timeline"]), "receipts": len(data["receipts"]),
-            "runtime_errors": len(data["runtime_errors"]),
+            "runtime_errors": len(data["runtime_errors"]), "build_log_rows": len(data["build_log"]),
         } for number, data in self.matches.items()}
 
     def get_frames(self, match_number, start_frame, end_frame, fields=None):
@@ -198,6 +220,11 @@ class ReviewWorkspace:
                 item["receipt"] = {name: row["receipt"].get(name) for name in ("frame", "key", "status", "stance")}
             projected.append(item)
         return {"rows_in_range": len(rows), "rows": projected[:TIMELINE_ROWS]}
+
+    def get_build_log(self, match_number, start_frame, end_frame, events=None):
+        rows = [row for row in self.match(match_number)["build_log"]
+                if start_frame <= row["frame"] <= end_frame and (not events or row.get("event") in events)]
+        return {"rows_in_range": len(rows), "rows": rows[:BUILD_LOG_ROWS]}
 
     def evidence(self):
         return {"matches": {str(number): data for number, data in self.matches.items()},
@@ -228,9 +255,14 @@ class ReviewWorkspace:
             raise ValueError("no staged files")
         if unchanged := [name for name, text in self.staged.items() if text == self.sources[name]]:
             raise ValueError(f"staged files are unchanged: {', '.join(unchanged)}")
+        if build_config.FILENAME in self.staged and len(self.staged) > 1:
+            raise ValueError(f"{build_config.FILENAME} must be the only file changed in its round")
+        checked = {"passed": True}
         for name, text in self.staged.items():
             if name.endswith(".py"):
                 sandbox.check_source(name, text)
+            elif name == build_config.FILENAME:
+                checked["build_config_changes"] = build_config.check_edit(self.sources[name], text)
         after = {**self.sources, **self.staged}
         report = {}
         for number, data in self.matches.items():
@@ -246,7 +278,7 @@ class ReviewWorkspace:
                 "reflex_frame_diffs": (compared["reflex_frame_diffs"] or [])[:10],
                 "tool_smoke": candidate["tool_smoke"],
             }
-        return {"passed": True, "matches": report}
+        return {**checked, "matches": report}
 
     def run_analysis(self, code):
         request = json.dumps({"source": code, "evidence": self.evidence()}, ensure_ascii=False)
@@ -344,7 +376,8 @@ class AgenticReviewClient:
                                                                      "error": problem}])
                             return proposal
                         output = {"error": problem, "rejections_left": SUBMIT_REJECTIONS - rejections}
-                    elif name in {"list_evidence", "get_frames", "get_timeline", "run_analysis", "read_policy",
+                    elif name in {"list_evidence", "get_frames", "get_timeline", "get_build_log", "run_analysis",
+                                  "read_policy",
                                   "write_policy", "discard_policy", "check_candidate"}:
                         output = getattr(workspace, name)(**arguments)
                     else:

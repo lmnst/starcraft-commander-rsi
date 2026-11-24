@@ -10,6 +10,7 @@ import unittest
 from unittest.mock import Mock, patch
 from urllib.error import HTTPError
 
+from app.rsi.build_config import DEFAULT_TEXT
 from app.rsi.evolution import active_pointer, initialize_batch, read_json, review_round
 from app.rsi.model_client import ModelCircuit, ModelClient, write_json
 from app.rsi.primitives import fallback_summarize
@@ -355,7 +356,9 @@ class EvolutionTests(unittest.TestCase):
         model = Mock()
         with patch("app.rsi_live.NativeV17Adapter", return_value=adapter) as native:
             result = _play_one(_parser().parse_args([]), self.batch, self.seed, model, 1)
-        native.assert_called_once_with(run, "Destination", "PylonPuller", 42, match_timeout=1800, hold_lock=False)
+        # The seed's build_config.json is the baseline-equivalent default; MacroBot plays with it.
+        native.assert_called_once_with(run, "Destination", "PylonPuller", 42, match_timeout=1800, hold_lock=False,
+                                       build_config=DEFAULT_TEXT)
         self.assertEqual(_parser().parse_args([]).max_frames, 36000)
         model.call.assert_not_called()
         self.assertEqual(result["state"], "finished")

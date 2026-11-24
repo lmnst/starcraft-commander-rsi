@@ -97,7 +97,7 @@ class NativeV17Adapter(EngineAdapter):
     """Wrap the existing local LAN match launcher and read only host telemetry."""
 
     def __init__(self, run_dir, map_name="Destination", opponent_name="PylonPuller", speed=DEFAULT_SPEED,
-                 *, match_timeout=DEFAULT_MATCH_TIMEOUT, hold_lock=True):
+                 *, match_timeout=DEFAULT_MATCH_TIMEOUT, hold_lock=True, build_config=None):
         self.run_dir = Path(run_dir).resolve()
         self.output = self.run_dir / "bwapi-data/write"
         self.end_file = self.output / "match-ended.json"
@@ -106,6 +106,8 @@ class NativeV17Adapter(EngineAdapter):
         self.speed = speed
         self.match_timeout = match_timeout
         self.hold_lock = hold_lock
+        # Text of the version's build_config.json; the host then runs MacroBot.dll instead of Baseline.dll.
+        self.build_config = build_config
         self._stopping = Event()
         self._watcher = None
         self._watch_error = None
@@ -188,7 +190,7 @@ class NativeV17Adapter(EngineAdapter):
                 self.run_dir, self.map_name, self.opponent_name, speed=self.speed, fullscreen=False,
                 update=update, keep_results=False, render_profile="standard", data_only=True,
                 match_timeout=self.match_timeout + NATIVE_EXIT_GRACE_SECONDS, visible_telemetry=True,
-                hold_lock=self.hold_lock,
+                hold_lock=self.hold_lock, build_config=self.build_config,
             )
         finally:
             self._stopping.set()

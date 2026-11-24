@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from .build_config import DEFAULT_TEXT as BUILD_CONFIG
+
 
 STRATEGY = """Let the baseline produce, expand and handle routine opening play. Intervene when visible pressure,
 unit health or a concrete objective supports it. Consider a separate squad when enough healthy units exist.
@@ -121,6 +123,8 @@ def decide_reflex(summary: dict, active_tool: str | None, memory: dict) -> dict 
 
 SEED_SOURCES = {
     "strategy.md": STRATEGY, "observer.py": OBSERVER, "tools.py": TOOLS, "rules.py": RULES,
+    # L4: MacroBot production parameters. The default reproduces the frozen baseline.
+    "build_config.json": BUILD_CONFIG,
 }
 VERSION_FILES = tuple(SEED_SOURCES)
 

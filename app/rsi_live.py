@@ -15,6 +15,7 @@ if __package__ in {None, ""}:
     # Keep this entry point runnable from both the CLI and unittest imports.
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from app.rsi import build_config
 from app.rsi.adapter import DEFAULT_MATCH_TIMEOUT, DEFAULT_SPEED, NativeV17Adapter
 from app.rsi.adjudication import MAP_STARTS
 from app.rsi.agentic_review import AgenticReviewClient
@@ -294,8 +295,11 @@ def _play_one(args, batch, version, model, number, *, stop_requested=None):
     started = monotonic()
     opponent = _opponent_for(args, number)
     # main() holds the machine-wide game lock for the whole batch, so matches can share it.
+    build_config_text = (version / build_config.FILENAME).read_text(encoding="utf-8")
+    build_config.parse(build_config_text)
     runner = LiveRunner(NativeV17Adapter(run, args.map, opponent, args.speed,
-                                         match_timeout=args.match_timeout, hold_lock=False),
+                                         match_timeout=args.match_timeout, hold_lock=False,
+                                         build_config=build_config_text),
                         model, version, run, max_frames=args.max_frames,
                         stalemate_zero_frames=args.stalemate_zero_frames, stop_requested=stop_requested)
     try:

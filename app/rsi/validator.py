@@ -17,11 +17,11 @@ from tempfile import TemporaryDirectory, NamedTemporaryFile
 if __package__ in {None, ""}:
     # The worker is invoked as an isolated script, so add only this app directory.
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from rsi import sandbox, situation
+    from rsi import build_config, sandbox, situation
     from rsi.primitives import CORE_SUMMARY_FIELDS, is_valid_key
     from rsi.seed_v1 import VERSION_FILES, write_seed
 else:
-    from . import sandbox, situation
+    from . import build_config, sandbox, situation
     from .primitives import CORE_SUMMARY_FIELDS, is_valid_key
     from .seed_v1 import VERSION_FILES, write_seed
 
@@ -30,7 +30,7 @@ TIMEOUT_SECONDS = 3
 MAX_SUMMARY_BYTES = 8192
 MAX_REASON_CHARS = 160
 SHADOW_MAX_FRAMES = 200
-SOURCE_LIMITS = {name: 2000 if name == "strategy.md" else 12000 for name in VERSION_FILES}
+SOURCE_LIMITS = {name: {"strategy.md": 2000, build_config.FILENAME: 4000}.get(name, 12000) for name in VERSION_FILES}
 TOOL_STATUSES = {"emit_key", "wait", "done", "abort"}
 VERSION_NAME = re.compile(r"v[1-9][0-9]*")
 RULE_NAME = re.compile(r"[a-z][a-z0-9]*(?:_[a-z0-9]+)*")
@@ -283,6 +283,9 @@ def _check_edits(review, facts):
     if (type(edits) is not dict or not 1 <= len(edits) <= 2
             or not edits.keys() <= SOURCE_LIMITS.keys()):
         raise ValueError("edits must modify 1 or 2 files from the policy whitelist")
+    if build_config.FILENAME in edits and len(edits) > 1:
+        # Keep tactical and production experiments apart so a round's outcome has one cause.
+        raise ValueError(f"{build_config.FILENAME} must be the only file changed in its round")
     for name, source in edits.items():
         if type(source) is not str or len(source) > SOURCE_LIMITS[name]:
             raise ValueError(f"{name}: expected text of at most {SOURCE_LIMITS[name]} characters")
@@ -456,6 +459,9 @@ def _validate_locked(batch, review, facts, observations, match_number, match_dir
         for name, source in edits.items():
             if name.endswith(".py"):
                 sandbox.check_source(name, source)
+            elif name == build_config.FILENAME:
+                event["build_config_changes"] = result["build_config_changes"] = build_config.check_edit(
+                    before[name], source)
         after = {**before, **edits}
         changes = _file_changes(before, after, edits)
         event["changed_functions"] = {name: change["functions"] for name, change in changes.items()}

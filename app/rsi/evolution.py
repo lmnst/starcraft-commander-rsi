@@ -9,7 +9,7 @@ from tempfile import TemporaryDirectory
 import time
 from typing import TypedDict
 
-from . import situation, validator
+from . import build_config, situation, validator
 from .model_client import PROVIDER_FAILURES, TRANSIENT_FAILURES, USAGE_FIELDS, write_json
 from .primitives import BASE_PRIMITIVES, CORE_SUMMARY_FIELDS
 from .runner import DECISION_SOURCES
@@ -30,7 +30,8 @@ STATE_SITUATION_OMIT = {"enemy": ("seen_types", "known_buildings"), "own": ("bas
 ACTION_FIELDS = ("source", "status", "action_type", "target", "key", "reason", "call")
 REVIEW_FIELDS = {"prediction_check", "evidence", "diagnosis", "hypothesis", "expectation",
                  "decision", "distillation_type", "edits"}
-DISTILLATION_TYPES = {"none", "strategy_only", "add_observation", "add_tool", "distill_rule", "bugfix_code"}
+DISTILLATION_TYPES = {"none", "strategy_only", "add_observation", "add_tool", "distill_rule", "bugfix_code",
+                      "tune_macro"}
 MAX_REVIEW_ATTEMPTS = 3
 # Transient service failures wait and retry without using a schema attempt.
 REVIEW_BACKOFF_SECONDS = (5, 15, 45)
@@ -84,9 +85,19 @@ submit one small, concrete modify experiment anchored in the strongest evidence,
 an existing parent that did better. Revert when a newer version clearly underperforms its parent.
 One match need not prove causation: test a measurable hypothesis and leave room to revert later.
 Supply the entire text of 1 or 2 changed whitelist files for modify and no edits for keep or revert.
-The whitelist is strategy.md (2,000 characters) and observer.py, tools.py, rules.py (12,000 each).
-Keep game policy pure. Never implement match termination, launcher, model calls, visibility changes
-or other L0 behavior. Policies use only the existing L1/L2/L3 contracts and v17 keys.
+The whitelist is strategy.md (2,000 characters), observer.py, tools.py, rules.py (12,000 each) and
+build_config.json (L4). Keep game policy pure. Never implement match termination, launcher, model
+calls, visibility changes or other L0 behavior. Policies use only the existing L1/L2/L3 contracts,
+v17 keys and the L4 parameters.
+build_config.json sets the production thresholds of the bot that runs economy, buildings, tech and
+unit mix under the keys (a configurable copy of the frozen baseline; the default reproduces it).
+Use it when the evidence points at production or tech timing, e.g. no detector before cloaked units
+arrive, a late expansion or a weak unit mix, which no key can fix. It is a flat JSON object holding
+every key below as an integer within its range. A build_config.json change must be the only file
+changed that round and may change at most 3 values; use distillation_type tune_macro for it.
+Shadow replay cannot evaluate it, so state the expected production effect (frame, building or count)
+in expectation. Frames run at 24 per second (1440 per game minute). Parameters:
+""" + build_config.describe() + """
 For rules.py, decide_reflex(summary, active_tool, memory) returns None or an action dict with
 rule_name (snake_case), action_type (key or tool), target (v17 key or registered tool name),
 args (dict), and reason (nonempty, at most 160 characters). Use target for a rule's key.
@@ -98,7 +109,7 @@ prediction_check (compare a prior expectation to facts, N/A for the first review
 evidence (1 to 3 distinct integers from facts[].fact_id for modify/revert, 0 to 3 for keep),
 diagnosis, hypothesis, expectation (a measurable next-round criterion),
 decision (keep, modify or revert), distillation_type (none, strategy_only, add_observation,
-add_tool, distill_rule or bugfix_code), and edits (object of filenames to complete source).
+add_tool, distill_rule, bugfix_code or tune_macro), and edits (object of filenames to complete source).
 The frame and reference_frame_after fields are frame numbers. The before_state and
 after_state values reference other fact_id values. Use distillation_type none for
 keep/revert. End the response after this object."""
@@ -129,7 +140,12 @@ def initialize_batch(batch, seed_version=None, parameters=None):
     batch = Path(batch)
     if seed_version is not None:
         seed_version = Path(seed_version).resolve()
-        sources = validator._read_sources(seed_version)
+        # A seed made before L4 has no build_config.json; it then starts from the baseline-equivalent default.
+        build_config_seeded = (seed_version / build_config.FILENAME).is_file()
+        sources = {name: (seed_version / name).read_text(encoding="utf-8") for name in VERSION_FILES
+                   if name != build_config.FILENAME or build_config_seeded}
+        if build_config_seeded:
+            build_config.parse(sources[build_config.FILENAME])
         for name, source in sources.items():
             if len(source) > validator.SOURCE_LIMITS[name]:
                 raise ValueError(f"seed {name} exceeds the policy file limit")
@@ -146,7 +162,8 @@ def initialize_batch(batch, seed_version=None, parameters=None):
             for name, source in sources.items():
                 (version / name).write_text(source, encoding="utf-8", newline="\n")
             manifest = read_json(version / "manifest.json")
-            write_json(version / "manifest.json", {**manifest, "seed_source": str(seed_version)})
+            write_json(version / "manifest.json", {**manifest, "seed_source": str(seed_version),
+                                                   "build_config_source": "seed" if build_config_seeded else "default"})
         write_json(staging / "batch.json", {
             "batch_id": batch.name, "started_at": datetime.now(timezone.utc).isoformat(),
             "parameters": parameters or {}, "matches": [], "rounds": [],
