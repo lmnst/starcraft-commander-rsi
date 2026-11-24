@@ -1,5 +1,5 @@
 import argparse
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 import ctypes
 from ctypes import wintypes
 from datetime import datetime
@@ -183,7 +183,7 @@ def prepare(slot, map_name, room, speed, control, opponent=None, fullscreen=True
         f"save_replay={'maps/replays/match.rep' if host and not replay else ''}\n"
         f"[config]\nshared_memory={'ON' if java else 'OFF'}\nconsole_attach_auto=FALSE\nconsole_alloc_auto=FALSE\n"
         "[window]\nwindowed=OFF\n"
-        f"[starcraft]\nsound={'ON' if host else 'OFF'}\n"
+        "[starcraft]\nsound=OFF\n"
         + (f"speed_override={speed}\n" if not replay else ""))
     (slot / "bwapi-data/bwapi.ini").write_text(configuration, encoding="ascii")
     env = {k: v for k, v in os.environ.items() if not k.startswith(("BWAPI_CONFIG_", "OPENBW_", "COMMANDER_"))}
@@ -271,18 +271,21 @@ def game_lock():
 
 def playing(run, map_name, opponent_name, control="human", speed=42, fullscreen=True,
             update=lambda value: None, smoke_frames=0, opponent_hosts=None, keep_results=None,
-            render_profile="expanded"):
+            render_profile="expanded", *, data_only=False, match_timeout=None, visible_telemetry=False,
+            hold_lock=True):
     if keep_results is None:
         keep_results = not smoke_frames
     if opponent_hosts is None:
         report = read_json(ROOT / "validation/compatibility.json") or {}
         opponent_hosts = f"{opponent_name}|{map_name}" in report.get("opponent_hosts", [])
-    with game_lock():
+    # A caller that plays several matches at once holds game_lock() itself for all of them.
+    with game_lock() if hold_lock else nullcontext():
         return run_match(run, map_name, opponent_name, control, speed, fullscreen, update,
-                         smoke_frames, opponent_hosts, keep_results, render_profile)
+                         smoke_frames, opponent_hosts, keep_results, render_profile, data_only, match_timeout,
+                         visible_telemetry)
 
 def run_match(run, map_name, opponent_name, control, speed, fullscreen, update, smoke_frames,
-              opponent_hosts, keep_results, render_profile):
+              opponent_hosts, keep_results, render_profile, data_only, match_timeout, visible_telemetry):
     from replay_info import save_match_labels
     from match_windows import MatchWindows, POLICY as WINDOW_POLICY
     windows = None
@@ -309,6 +312,12 @@ def run_match(run, map_name, opponent_name, control, speed, fullscreen, update, 
         host_env = prepare(run, map_name, room, speed, control, fullscreen=fullscreen,
                            opponent_hosts=opponent_hosts, render_profile=render_profile)
         host_env["COMMANDER_RESULTS_WATCH"] = "1" if keep_results else "0"
+        if data_only:
+            host_env["COMMANDER_DATA_ONLY"] = "1"
+        if visible_telemetry:
+            # The native telemetry switch also polls a test-input file. Leave that
+            # path absent: live commands use the normal game window and key hook.
+            host_env["COMMANDER_TEST_COMMANDS"] = str(run / "unused-test-input")
         if smoke_frames:
             host_env["COMMANDER_SMOKE_FRAMES"] = str(smoke_frames)
         if opponent:
@@ -334,8 +343,12 @@ def run_match(run, map_name, opponent_name, control, speed, fullscreen, update, 
         if opponent:
             guest = peers.launch(enemy, enemy_env)
             if opponent["kind"] == "java":
+                # JBWAPI reads java.nio.Buffer.address by reflection, which Java 16+ refuses unless
+                # java.nio is opened; on the PATH JDK 21 PurpleWave crashed at startup and never moved
+                # (matches/rsi/20261124-145321-768219/match-5/opponent/java.log). Java 8 ignores this variable.
+                java_env = {**enemy_env, "JDK_JAVA_OPTIONS": "--add-opens=java.base/java.nio=ALL-UNNAMED"}
                 peers.start([str(JAVA), "-Xmx768m", "-jar", "bwapi-data\\AI\\PurpleWave.jar"],
-                            enemy, enemy_env, "java.log")
+                            enemy, java_env, "java.log")
             time.sleep(2)
         host = games.launch(run, host_env)
         output = run / "bwapi-data/write"
@@ -356,12 +369,14 @@ def run_match(run, map_name, opponent_name, control, speed, fullscreen, update, 
         status["state"] = "playing"
         store(run / "match.json", status)
         update("正在对战。结束后自动保存 .rep，并保留战绩统计页面供你查看。")
-        play_deadline = time.monotonic() + 55 if smoke_frames else float("inf")
+        play_deadline = time.monotonic() + (55 if smoke_frames else match_timeout or float("inf"))
         while host.poll() is None and not (end := read_json(end_file)):
             if windows.failure:
                 raise RuntimeError("窗口管理器异常："+windows.failure)
             if time.monotonic() >= play_deadline:
-                raise RuntimeError("验证局未在预期时间内推进。")
+                if smoke_frames:
+                    raise RuntimeError("验证局未在预期时间内推进。")
+                raise TimeoutError("正式对局在时限内未自然结算。")
             if opponent and guest.poll() is not None:
                 # A peer leaving can itself end the match. Give the host time to save.
                 for _ in range(50):
@@ -409,6 +424,9 @@ def run_match(run, map_name, opponent_name, control, speed, fullscreen, update, 
                 status["native_error_files"] = [path.relative_to(run).as_posix() for path in native_errors]
                 raise RuntimeError(f"游戏异常退出，未正常结束对局。崩溃日志已保留在：{run / 'Errors'}")
             status["state"] = "closed"
+    except TimeoutError as error:
+        status.update(state="timed_out", error=str(error))
+        raise
     except Exception as error:
         status.update(state="error", error=str(error))
         raise
