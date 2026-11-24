@@ -25,23 +25,23 @@ function Resolve-EnvValue([string]$Name) {
     return $value
 }
 
-function Resolve-Python312 {
-    $explicit = "C:\Users\21425\AppData\Local\Programs\Python\Python312\python.exe"
-    if (Test-Path $explicit) { return @($explicit) }
-    return @("py", "-3.12")
+$explicitPy = "C:\Users\21425\AppData\Local\Programs\Python\Python312\python.exe"
+if (Test-Path $explicitPy) {
+    $cmd = $explicitPy
+    $prefix = @()
+} else {
+    $cmd = "py"
+    $prefix = @("-3.12")
 }
 
 if (-not (Resolve-EnvValue $ApiKeyEnv)) { throw "$ApiKeyEnv is not set" }
 
 Set-Location (Split-Path -Parent $PSScriptRoot)
-$py = Resolve-Python312
 $extra = @()
 if ($NoEvolve) { $extra += "--no-evolve" }
 if ($MaxFrames -gt 0) { $extra += @("--max-frames", $MaxFrames) }
 if ($BatchDir) { $extra += @("--batch-dir", $BatchDir) }
 
-$cmd = $py[0]
-$prefix = if ($py.Length -gt 1) { $py[1..($py.Length - 1)] } else { @() }
 & $cmd @prefix app/rsi_live.py `
     --evolution-mode v2 `
     --rounds $Rounds --matches-per-round ($Opponent.Length) --parallel $Parallel `
