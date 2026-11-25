@@ -1,0 +1,117 @@
+{
+  "candidate_id": "c10",
+  "parent": "v5",
+  "created_at": "2026-11-24T20:14:36.883039+00:00",
+  "changed_files": [
+    "MacroBot.cpp",
+    "build_config.json"
+  ],
+  "changed_functions": {},
+  "build_config_changes": {
+    "robo_frame": [
+      9000,
+      7800
+    ],
+    "robo_army": [
+      10,
+      8
+    ]
+  },
+  "cpp_changed_lines": 10,
+  "dll_sha256": "6e30a27f2e56fb6272972bcbc5b7373dacdd3332cd5c096adca0f9cd4ed40d16",
+  "macrobot_source_sha256": "52b864731aaaa397070ef83efbce99048d084c5cb1f20cf8bed93d49ebe7cb36",
+  "diagnosis": "Against PylonPuller and BananaBrain, v5 loses because its tech comes too late, not because it lacks static defence. In match-40 (v5 vs PylonPuller) the Cybernetics Core was planned at 5736, against 4296 in the won match-30. Every mineral was going into Zealots and Probes, and the Core was never reserved for. As a result the Robotics Facility was not planned until 9360, after the Nexus. DTs showed up at 10520, the first Observer only finished at 12053, and an 18-unit army dropped to 2 between 11760 and 12480 while it fought invisible DTs. The DT sighting also put a Forge (10728) into the queue next to the Observatory, which slowed detection further. In match-36 (BananaBrain), Robo was planned at 9504 and the Observer finished at 12245, just as the Dragoon fight was lost. The c8 and c9 cannon insurance cost army and still lost every game, so the answer is a faster Core-to-Robo-to-Observer path, not cannons.",
+  "hypothesis": "Three changes. (1) production() reserves minerals and gas for the Core, Robotics Facility or Observatory whenever nextBuilding() wants one and no enemy is at our bases. Gateways and Nexus then stop spending that money, so the building goes down as soon as it can. (2) nextBuilding() puts the Robotics Facility ahead of the natural Nexus once frame > robo_frame and army >= robo_army, with no home threat. In the config, robo_frame goes 9000\u21927800 and robo_army 10\u21928. (3) When cloak is seen while a Robo already exists but no Observatory, the Observatory comes before the Forge-and-cannon detour. Rush handling is untouched: rushHold still delays the Core, and under a home threat nothing is reserved.",
+  "expectation": "Core placed around 4300-4800 instead of 5700-6000. Robo around 7800-8400, Observer done around 9600-10000, before PylonPuller's DTs at about 10500 and BananaBrain's Dragoon fight at about 12000. Peak army against PylonPuller stays above 18 and survives the DT wave. A win there or a higher score (above 70). BananaBrain gets earlier Dragoons and range, so the army at 12000 is larger (score above 55). Steamhammer keeps a build like the won match-30 (Core 4296, Robo 9312), so another win is expected.",
+  "version": "v6",
+  "promoted_from": "c10",
+  "promoted_at": "2026-11-24T20:32:52.104340+00:00",
+  "verdict": {
+    "decision": "promoted",
+    "reason": "win_rate_improved",
+    "details": {
+      "compared_opponents": [
+        "PylonPuller",
+        "Steamhammer",
+        "BananaBrain"
+      ],
+      "champion_win_rate": 0.1667,
+      "challenger_win_rate": 0.3333,
+      "champion_loss_rate": 0.8333,
+      "challenger_loss_rate": 0.6667,
+      "champion_mean_score": 57.01,
+      "challenger_mean_score": 56.12,
+      "score_delta": -0.89,
+      "champion_fps": 23.75,
+      "challenger_fps": 23.77,
+      "per_opponent": {
+        "PylonPuller": {
+          "champion": {
+            "games": 2,
+            "wins": 0,
+            "losses": 2,
+            "inconclusive": 0,
+            "win_rate": 0.0,
+            "loss_rate": 1.0,
+            "mean_score": 65.78,
+            "mean_fps": 23.814
+          },
+          "challenger": {
+            "games": 1,
+            "wins": 0,
+            "losses": 1,
+            "inconclusive": 0,
+            "win_rate": 0.0,
+            "loss_rate": 1.0,
+            "mean_score": 60.47,
+            "mean_fps": 23.816
+          }
+        },
+        "Steamhammer": {
+          "champion": {
+            "games": 2,
+            "wins": 1,
+            "losses": 1,
+            "inconclusive": 0,
+            "win_rate": 0.5,
+            "loss_rate": 0.5,
+            "mean_score": 52.9,
+            "mean_fps": 23.733
+          },
+          "challenger": {
+            "games": 1,
+            "wins": 1,
+            "losses": 0,
+            "inconclusive": 0,
+            "win_rate": 1.0,
+            "loss_rate": 0.0,
+            "mean_score": 88.39,
+            "mean_fps": 23.665
+          }
+        },
+        "BananaBrain": {
+          "champion": {
+            "games": 2,
+            "wins": 0,
+            "losses": 2,
+            "inconclusive": 0,
+            "win_rate": 0.0,
+            "loss_rate": 1.0,
+            "mean_score": 52.36,
+            "mean_fps": 23.711
+          },
+          "challenger": {
+            "games": 1,
+            "wins": 0,
+            "losses": 1,
+            "inconclusive": 0,
+            "win_rate": 0.0,
+            "loss_rate": 1.0,
+            "mean_score": 19.5,
+            "mean_fps": 23.822
+          }
+        }
+      }
+    }
+  }
+}

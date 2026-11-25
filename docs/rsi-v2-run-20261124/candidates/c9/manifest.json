@@ -1,0 +1,16 @@
+{
+  "candidate_id": "c9",
+  "parent": "v5",
+  "created_at": "2026-11-24T19:42:05.569717+00:00",
+  "changed_files": [
+    "MacroBot.cpp"
+  ],
+  "changed_functions": {},
+  "build_config_changes": null,
+  "cpp_changed_lines": 7,
+  "dll_sha256": "187bb5f4cac3c7ee81be809280602249d39ede91c59804a2b63d95d8ec967ecc",
+  "macrobot_source_sha256": "88997e2721ed2f6e34bb40a59e3b007561a87412bd9b0f86ffc1f111dc0b1787",
+  "diagnosis": "Steamhammer is a Protoss DT opener. In c8 (match-34) DTs showed up at 9480 while we had 0 Observers and 0 cannons. The Forge was only planned at 9576 and the Robotics Facility finished at 10398. All 23 Probes were dead by 10800, and that is what turned v5's win into a loss. c8's dtGuard only fired when rushSeen was set, so it never helped against Steamhammer. Separately, refresh() counts an enemy Observer as a cloak sighting (matches 35 and 36 log cloak_seen with type Protoss_Observer). Each time, the build then switched to the Forge/cannon/robo detection path in the middle of a Dragoon fight. In match-35 that cost a Forge plus several cannons at 11300-13400 while the army was collapsing. In match-36 a cannon was planned at 15384 with zero army. The BananaBrain and PylonPuller losses were mainly Dragoon mass beating our smaller army. A small code change cannot fix that, so this round only patches the two detection bugs.",
+  "hypothesis": "Two narrow fixes in MacroBot.cpp. (1) Seeing an enemy Observer no longer sets cloakSeen; DTs, other cloaked units and burrowed units still do. This stops minerals from going to Forge and cannons during a Dragoon fight just because an enemy Observer was spotted. (2) DT insurance: against a Protoss enemy, once the Core exists and frame is 6800 or later, build one Forge and then one Photon Cannon at the main Nexus. That costs 300 minerals and should finish around 8500-9000, before the 9480 DTs seen in match-34. The existing retreat-to-detection micro then pulls units to the cannon, and worker defense keeps Probes alive near it. Unlike c8, this does not depend on rushSeen, and it does not block expansion.",
+  "expectation": "Steamhammer: a cannon is done by about 9000, DTs at the main get shot, Probes survive (more than 15 at 11000 instead of 0), and we win again (score above 85). BananaBrain and PylonPuller: the only cost is about 300 minerals near frame 7000, so at most one Zealot fewer. No Observer-triggered tech detour, so the army fighting at 11000-13000 stays larger. Scores are about the same or slightly higher than v5 (BananaBrain above 52, PylonPuller around 70)."
+}

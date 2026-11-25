@@ -1,0 +1,16 @@
+{
+  "candidate_id": "c11",
+  "parent": "v6",
+  "created_at": "2026-11-24T20:41:15.460356+00:00",
+  "changed_files": [
+    "MacroBot.cpp"
+  ],
+  "changed_functions": {},
+  "build_config_changes": null,
+  "cpp_changed_lines": 5,
+  "dll_sha256": "6d63d2977c0636b5bfb4e5076e097f69a8aa19ba5e3d7751ddbfe194e509e198",
+  "macrobot_source_sha256": "70a045301130bde889def4260ab4e49f25348a578ee1101a94e7a2fb7b4d5bea",
+  "diagnosis": "BananaBrain (match-43) and the Steamhammer retest (match-44) were both lost the same way: a zealot rush wiped out the main base. Our 5 Zealots stood against 6\u20137 enemy Zealots. Worker defense has a hard rule in pickDefenseTarget and workerDefense: once army.size() >= 5, non-building targets are skipped or defenders are released with reason \"army\". That rule ignores which side is stronger.\n\nThe log confirms it. At match-43@6704 the defense ended with reason \"army\" while 6 enemy Zealots were in the main. Probes were idle at 6600\u20136720 and only joined at 6840 after a Zealot died. By then we were losing. Workers fell from 19 to 0 by 7680.\n\nMatch-44 shows the same pattern: 6\u20137 of our Zealots faced 6\u20138 of theirs at 6120\u20136480. The bot already computes threatPower (enemy ground power near our bases) and homePower (our army power there), but worker defense never looked at them.",
+  "hypothesis": "Release worker defenders, or skip unit targets, at army >= 5 only when threatPower <= homePower*1.1. When the enemy outguns the home army, 4 Probes keep joining the fight next to our Zealots. They add damage and soak hits in the early 5v6/6v7 Zealot fights. Nothing changes when our army is stronger, so later-game and macro behavior stay the same.",
+  "expectation": "Against BananaBrain and Steamhammer zealot rushes, Probes stay engaged through frames 6000\u20137200. The aim is to hold the main at about 6900 instead of collapsing: at least 10 workers alive at 8400 and past the 8400 cutoff, for a score above 30 and possibly a win. PylonPuller (the mid-game DT fight) and the Steamhammer macro win should be unchanged."
+}

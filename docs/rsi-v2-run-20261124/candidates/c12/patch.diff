@@ -1,0 +1,32 @@
+--- v6/MacroBot.cpp
++++ c12/MacroBot.cpp
+@@ -312,7 +312,10 @@
+     if(count(Protoss_Robotics_Facility,true) && count(Protoss_Observatory)==0) return Protoss_Observatory;
+     // Detection before the natural: DTs (match-40@10520) and Reavers arrive before a post-Nexus Robo can answer.
+     if(core && count(Protoss_Robotics_Facility)==0 && !homeThreat && frame>cfg.robo_frame && army.size()>=cfg.robo_army) return Protoss_Robotics_Facility;
+-    if(!homeThreat && count(Protoss_Nexus)<2 && workers.size()>=cfg.expand2_workers && army.size()>=cfg.expand2_army && frame>cfg.expand2_frame && expansion().isValid()) return Protoss_Nexus;
++    // Natural only while our army out-powers the remembered enemy army (match-46@8976: Nexus right after attack_stop 21 vs 24).
++    double ownArmy=0; for(auto u:army) ownArmy+=power(u);
++    bool safeExpand=army.size()>=14 || ownArmy>=rememberedEnemyPower()*1.1 || frame>13000;
++    if(!homeThreat && safeExpand && count(Protoss_Nexus)<2 && workers.size()>=cfg.expand2_workers && army.size()>=cfg.expand2_army && frame>cfg.expand2_frame && expansion().isValid()) return Protoss_Nexus;
+     int targetGates=std::min(cfg.gates_cap,cfg.gates_base+(workers.size()>=cfg.gates_bonus_workers?1:0)+cfg.gates_per_extra_base*std::max(0,int(nexuses.size())-1));
+     if(gates<targetGates && core && (me->minerals()>cfg.gate_minerals || army.size()>=cfg.gate_army)) return Protoss_Gateway;
+     if(core && count(Protoss_Robotics_Facility)==0 && (frame>cfg.robo_frame && army.size()>=cfg.robo_army)) return Protoss_Robotics_Facility;
+@@ -395,7 +398,7 @@
+       if(e->getID()==defenseRetryTarget && frame<defenseRetryUntil) continue;
+       if(t==Protoss_Photon_Cannon && e->isCompleted() && e->getHitPoints()+e->getShields()>80) continue;
+       if(t.isWorker() && !e->isAttacking()) continue;
+-      if(army.size()>=5 && !t.isBuilding()) continue;
++      if(army.size()>=5 && !t.isBuilding() && threatPower<=homePower*1.1) continue;
+       if(t==Protoss_Pylon || t==Protoss_Photon_Cannon || t.canAttack()) {
+         double s=baseDistance(e->getPosition());
+         if(t==Protoss_Photon_Cannon && !e->isCompleted()) s-=300;
+@@ -441,7 +444,7 @@
+         // Do not immediately reacquire the same unreachable idle target.
+         defenseRetryTarget=current->getID(); defenseRetryUntil=frame+contactTimeout;
+       }
+-      else if(army.size()>=5 && !current->getType().isBuilding()) reason="army";
++      else if(army.size()>=5 && !current->getType().isBuilding() && threatPower<=homePower*1.1) reason="army";
+       if(reason) {releaseDefenders(reason);current=nullptr;}
+     }
+     Unit fresh=pickDefenseTarget();

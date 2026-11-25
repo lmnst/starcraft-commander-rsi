@@ -1,0 +1,45 @@
+--- v7/MacroBot.cpp
++++ c18/MacroBot.cpp
+@@ -39,7 +39,7 @@
+   bool attacking = false, cloakSeen = false, cloakTechSeen = false, rushSeen = false;
+   // Scouted opening signals (legal sightings only): mass-gateway with no tech building => zealot rush.
+   std::set<int> enemyGateIds;
+-  bool enemyTechSeen = false, earlyZealotSeen = false;
++  bool enemyTechSeen = false, earlyZealotSeen = false, enemyCannonSeen = false;
+   // Unscouted enemies still build an army: floor the remembered power with a time-based estimate.
+   double enemyEstimate() const { return std::max(rememberedEnemyPower(),std::max(0.0,(frame-4500)/240.0)); }
+   Unit homeThreat = nullptr;
+@@ -221,6 +221,13 @@
+       if(t==Protoss_Gateway || t==Terran_Barracks) enemyGateIds.insert(u->getID());
+       if(t==Protoss_Assimilator || t==Protoss_Cybernetics_Core || t==Protoss_Forge || t==Terran_Refinery || t==Zerg_Extractor) enemyTechSeen=true;
+       if(t==Protoss_Zealot && frame<3800) earlyZealotSeen=true;
++      if(t==Protoss_Photon_Cannon && frame<6000) enemyCannonSeen=true;
++    }
++    // Cannon-first Protoss with no Gateway in sight (match-69@3360: Forge+4 cannons, DTs at 10320 with no
++    // detection): follow the tested Citadel-sighting path (match-65@6584: Forge, cannon, Robo, Observer).
++    if(!cloakTechSeen && frame>=4800 && frame<7000 && enemyGateIds.empty() && enemyCannonSeen) {
++      cloakTechSeen=true;
++      trace<<"{\"event\":\"cloak_seen\",\"frame\":"<<frame<<",\"flag\":\"cannon_opening\",\"type\":\"none\"}\n";
+     }
+     if(!rushSeen && frame<5000 && !enemyTechSeen && (enemyGateIds.size()>=2 || earlyZealotSeen)) {
+       rushSeen=true;
+@@ -509,7 +516,8 @@
+     for(auto w:workers) if(w->getOrderTarget()) assigned[w->getOrderTarget()->getID()]++;
+     int gasTarget=me->gas()<cfg.gas_bank_full?cfg.gas_workers_full:(me->gas()<cfg.gas_bank_reduced?cfg.gas_workers_reduced:0);
+     // Against an early zealot/ling/marine rush, minerals buy the defending warriors; bank only a little gas.
+-    if(rushSeen && frame<8000 && army.size()<6 && (me->gas()>=100 || count(Protoss_Cybernetics_Core)==0)) gasTarget=0;
++    // Once the Core is done, let gas reach the Singularity Charge price (match-72: gas froze at 118 < 150 until 8000).
++    if(rushSeen && frame<8000 && army.size()<6 && (me->gas()>=(count(Protoss_Cybernetics_Core,true)?150:100) || count(Protoss_Cybernetics_Core)==0)) gasTarget=0;
+     for(auto w:workers) {
+       if(w==builder || w==scout || defenders.count(w->getID()) || w->isConstructing()) continue;
+       if(!commandReady(w,24)) continue;
+@@ -530,7 +538,8 @@
+     }
+   }
+   bool train(Unit u,UnitType type) {
+-    if(cash<type.mineralPrice() || gas<type.gasPrice() || !u->canTrain(type)) return false;
++    // Gas reservations (range, Robo/Observatory) may push the gas budget below zero; that must not block Zealots.
++    if(cash<type.mineralPrice() || (type.gasPrice()>0 && gas<type.gasPrice()) || !u->canTrain(type)) return false;
+     if(u->train(type)){cash-=type.mineralPrice();gas-=type.gasPrice();return true;} return false;
+   }
+   bool upgrade(Unit u,UpgradeType type) {

@@ -1,0 +1,49 @@
+--- v3/MacroBot.cpp
++++ c5/MacroBot.cpp
+@@ -379,6 +379,8 @@
+       if(t==Protoss_Photon_Cannon && e->isCompleted() && e->getHitPoints()+e->getShields()>80) continue;
+       if(t.isWorker() && !e->isAttacking()) continue;
+       if(army.size()>=5 && !t.isBuilding()) continue;
++      // Do not feed Probes into a real army (e.g. a Dragoon push); only pull against small raids.
++      if(!t.isBuilding() && threatPower>8) continue;
+       if(t==Protoss_Pylon || t==Protoss_Photon_Cannon || t.canAttack()) {
+         double s=baseDistance(e->getPosition());
+         if(t==Protoss_Photon_Cannon && !e->isCompleted()) s-=300;
+@@ -425,6 +427,7 @@
+         defenseRetryTarget=current->getID(); defenseRetryUntil=frame+contactTimeout;
+       }
+       else if(army.size()>=5 && !current->getType().isBuilding()) reason="army";
++      else if(!current->getType().isBuilding() && threatPower>8) reason="overwhelmed";
+       if(reason) {releaseDefenders(reason);current=nullptr;}
+     }
+     Unit fresh=pickDefenseTarget();
+@@ -626,6 +629,10 @@
+            (!undetectedThreat || u->getDistance(e)<u->getDistance(undetectedThreat))) undetectedThreat=e;
+         if(!e->isDetected() || !u->canAttack(e) || u->getDistance(e)>=400) continue;
+         double score=u->getDistance(e);
++        // Focus fire: prefer what we can hit right now, and among those the most damaged.
++        bool inRange=u->isInWeaponRange(e);
++        if(inRange) score-=120;
++        if(inRange && e->getType().canAttack()) score+=(e->getHitPoints()+e->getShields())*.2;
+         if(e->getType().canAttack() && !e->getType().isWorker()) score-=100;
+         if(e->getType()==Protoss_Reaver || e->getType()==Protoss_High_Templar || e->getType()==Protoss_Dark_Templar) score-=180;
+         if(e->getType().isWorker()) score-=20;
+--- v3/build_config.json
++++ c5/build_config.json
+@@ -24,7 +24,7 @@
+   "dragoon_zealot_floor": 3,
+   "range_after_dragoons": 1,
+   "weapons_army": 10,
+-  "robo_frame": 9000,
++  "robo_frame": 8000,
+   "robo_army": 10,
+   "observers_base": 1,
+   "observers_alert": 2,
+@@ -34,6 +34,6 @@
+   "citadel_zealots": 8,
+   "citadel_frame": 9500,
+   "proactive_observer_frame": -1,
+-  "proactive_cannon_frame": -1,
++  "proactive_cannon_frame": 7000,
+   "cannons_per_base": 1
+ }

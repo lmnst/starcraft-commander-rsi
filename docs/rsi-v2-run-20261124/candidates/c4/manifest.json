@@ -1,0 +1,16 @@
+{
+  "candidate_id": "c4",
+  "parent": "v2",
+  "created_at": "2026-11-24T16:54:41.521167+00:00",
+  "changed_files": [
+    "MacroBot.cpp"
+  ],
+  "changed_functions": {},
+  "build_config_changes": null,
+  "cpp_changed_lines": 29,
+  "dll_sha256": "aa5e632b38af1f1a4a1f44f410946fb696efac96ebd174cca00eecc083c73245",
+  "macrobot_source_sha256": "a851c581073ff75dca4eaa55ec5f7314436ea5c1d1ca8310196e5182d2662e96",
+  "diagnosis": "Steamhammer opened with a zealot rush. In match 14 at frames 3600 to 6000, 1 to 7 enemy Zealots were at our base while we had only 1 Zealot and 1 Gateway. The second Gateway waited for gate2_workers, the Cybernetics Core came first, and the Nexus kept spending on Probes. Worker defense (17 different Probes pulled) fed every Probe to the Zealots, and the game ended at frame 6000 with 0 units and a score of 4.3. In the Champion games (matches 6, 12 and 16) the army was also only 4 to 7 units at frame 7200 against 5 or more enemy units, because production stayed at 2 Gateways while 23 Probes were being made. The PylonPuller losses (matches 13 and 16) came from Dark Templar and Reavers; that is a separate problem, and the c3 proactive-observer change did not fix it.",
+  "hypothesis": "Add an early-rush response to MacroBot.cpp. refresh() sets a rushSeen flag when 2 or more enemy Zealots, Zerglings or Marines are within 1600 px of our main before frame 6500. It also measures enemy ground power near our bases (threatPower) against our army power there (homePower). Once rushSeen is set, nextBuilding() adds the second Gateway right away and a third Gateway before tech, until frame 9000. While under pressure (army under 5, home threat or threatPower > homePower, before frame 9000), production() stops making Probes and spends idle Gateways on Zealots or Dragoons. Nothing changes until a rush is actually seen, so PylonPuller and BananaBrain games without an early zealot push should play the same as the Champion.",
+  "expectation": "Steamhammer: the bot survives the zealot rush past frame 6000 with 3 or more army units at frame 5000 instead of 1, Probes stop dying to the Zealots, and the score rises well above 4.3 toward 60 or more, with a possible win. BananaBrain (enemy Zealots seen at frame 4560 in match 15) gets the third Gateway earlier, so army size at frames 7200 to 9600 should be at least 8 and the score should go up. PylonPuller should stay unchanged unless it opens with Zealots."
+}

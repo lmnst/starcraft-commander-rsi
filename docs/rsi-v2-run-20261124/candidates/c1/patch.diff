@@ -1,0 +1,77 @@
+--- v1/MacroBot.cpp
++++ c1/MacroBot.cpp
+@@ -55,6 +55,23 @@
+   std::vector<UndetectedSnapshot> undetectedSnapshots;
+   std::map<int, Position> ownPositions;
+   int enemySnapshotFrame = -1;
++  // Remembered enemy combat units (legal sightings only): id -> (type, last seen frame).
++  std::map<int, std::pair<UnitType,int>> enemyArmyMemory;
++  double typeValue(UnitType t) const {
++    if(t.isWorker() || t.isBuilding() || t==Protoss_Interceptor || t==Protoss_Scarab || t==Zerg_Larva || t==Zerg_Egg) return 0;
++    if(!t.canAttack() && t!=Protoss_Reaver && t!=Protoss_Carrier) return 0;
++    if(t==Protoss_Zealot) return 2.0;
++    if(t==Protoss_Dragoon) return 3.0;
++    if(t==Protoss_Reaver) return 7.0;
++    if(t==Protoss_Dark_Templar) return 3.5;
++    if(t==Protoss_Archon) return 6.0;
++    return std::max(0.5,(t.mineralPrice()+t.gasPrice())/60.0);
++  }
++  double rememberedEnemyPower() const {
++    double sum=0;
++    for(const auto &e:enemyArmyMemory) if(frame-e.second.second<3600) sum+=typeValue(e.second.first);
++    return sum;
++  }
+   //@config-begin
+   struct BuildConfig {
+ #define MACRO_DECLARE(name) int name=0;
+@@ -178,6 +195,7 @@
+       }
+       if(!u->isDetected() && !u->isFlying() && t.canAttack())
+         undetectedSnapshots.push_back({u->getID(),t,u->getPosition()});
++      if(u->isCompleted() && typeValue(t)>0) enemyArmyMemory[u->getID()]={t,frame};
+     }
+     for(auto it=enemyBuildings.begin();it!=enemyBuildings.end();) {
+       bool seen=false; for(auto e:enemies) if(e->getID()==it->first) seen=true;
+@@ -557,8 +575,19 @@
+     if(commandReady(u) && (u->getOrder()!=Orders::Move || u->isIdle() || u->getTargetPosition().getDistance(p)>48 || u->isStuck())) u->move(p);
+   }
+   void combat() {
+-    if(army.size()>=6) attacking=true;
+-    if(army.size()<3) attacking=false;
++    // Attack as a group only with a clear edge over the remembered enemy army;
++    // fall back to the rally when the edge is gone instead of trickling units away.
++    double mine=0; for(auto u:army) mine+=power(u);
++    double theirs=rememberedEnemyPower();
++    bool maxed=me->supplyUsed()>=340 || army.size()>=30;
++    if(!attacking && ((army.size()>=8 && mine>=theirs*1.4+4) || maxed)) {
++      attacking=true;
++      trace<<"{\"event\":\"attack_start\",\"frame\":"<<frame<<",\"mine\":"<<mine<<",\"theirs\":"<<theirs<<"}\n";
++    }
++    if(attacking && !maxed && (army.size()<4 || mine<theirs*0.9)) {
++      attacking=false;
++      trace<<"{\"event\":\"attack_stop\",\"frame\":"<<frame<<",\"mine\":"<<mine<<",\"theirs\":"<<theirs<<"}\n";
++    }
+     Position goal=homeThreat?homeThreat->getPosition():(attacking?objective():rally);
+     Position center=home;
+     if(!army.empty()){long x=0,y=0;for(auto u:army){x+=u->getPosition().x;y+=u->getPosition().y;}center=Position(int(x/army.size()),int(y/army.size()));}
+@@ -660,6 +689,7 @@
+       [u](const UndetectedSnapshot &e){return e.id==u->getID();}),undetectedSnapshots.end());
+     ownPositions.erase(u->getID());
+     enemyBuildings.erase(u->getID());
++    enemyArmyMemory.erase(u->getID());
+     if(u->getType().isMineralField()) BWEM::Map::Instance().OnMineralDestroyed(u);
+     else if(u->getPlayer()==Broodwar->neutral() && u->getType().isBuilding()) BWEM::Map::Instance().OnStaticBuildingDestroyed(u);
+   }
+--- v1/build_config.json
++++ c1/build_config.json
+@@ -6,8 +6,8 @@
+   "gates_cap": 8,
+   "gate_minerals": 180,
+   "gate_army": 6,
+-  "gas1_zealots": 3,
+-  "gas1_frame": 4400,
++  "gas1_zealots": 1,
++  "gas1_frame": 3200,
+   "gas_bank_full": 100,
+   "gas_workers_full": 3,
+   "gas_bank_reduced": 240,

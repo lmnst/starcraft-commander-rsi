@@ -1,0 +1,39 @@
+--- v6/MacroBot.cpp
++++ c14/MacroBot.cpp
+@@ -455,6 +455,13 @@
+     }
+     if(!current) return;
+     int wanted=current->getType().isWorker()?1:(current->getType().isBuilding()?6:4);
++    // Two early raiders against fewer than 2 warriors: 4 Probes only feed them (match-48@4320 lost 8 Probes,
++    // no kills). Commit 7 Probes so the fight is won once instead of lost in repeated trickles.
++    if(!current->getType().isWorker() && !current->getType().isBuilding() && army.size()<2 && frame<7000) {
++      int raiders=0;
++      for(auto e:enemies) if(!e->getType().isWorker() && !e->getType().isBuilding() && !e->isFlying() && e->isDetected() && e->getType().canAttack() && baseDistance(e->getPosition())<defenseRadius) ++raiders;
++      if(raiders==2) wanted=7;
++    }
+     wanted=std::min(wanted,std::max(0,int(workers.size())-4));
+     for(auto it=defenders.begin();it!=defenders.end();) {
+       Unit w=Broodwar->getUnit(*it);
+@@ -630,7 +637,9 @@
+     double mine=0; for(auto u:army) mine+=power(u);
+     double theirs=rememberedEnemyPower();
+     bool maxed=me->supplyUsed()>=340 || army.size()>=30;
+-    if(!attacking && ((army.size()>=8 && mine>=theirs*1.4+4) || maxed)) {
++    // An unscouted enemy is not an empty one: floor the attack gate with a capped time estimate.
++    double theirsGate=std::max(theirs,std::min(enemyEstimate(),12.0));
++    if(!attacking && ((army.size()>=8 && mine>=theirsGate*1.4+4) || maxed)) {
+       attacking=true;
+       trace<<"{\"event\":\"attack_start\",\"frame\":"<<frame<<",\"mine\":"<<mine<<",\"theirs\":"<<theirs<<"}\n";
+     }
+@@ -678,6 +687,11 @@
+       if(target && homeThreat && army.size()<8 && threatPower>homePower*1.2 && baseDistance(target->getPosition())>260 && baseDistance(u->getPosition())>200) {
+         move(u,toward(home,u->getPosition(),96));continue;
+       }
++      // Leash: while holding (no attack, nothing within 700 of a base) do not chase armed units out
++      // of the rally zone; piecemeal mid-map skirmishes left Zealots damaged for the real fight (match-56@6600).
++      if(target && !attacking && !homeThreat && !target->getType().isWorker() && baseDistance(target->getPosition())>560) {
++        move(u,rally);continue;
++      }
+       if(target) hit(u,target);
+       else if(undetectedThreat) {
+         // Do not chase an untargetable attacker while waiting for detection.

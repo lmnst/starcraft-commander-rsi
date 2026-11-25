@@ -1,0 +1,107 @@
+{
+  "candidate_id": "c6",
+  "parent": "v3",
+  "created_at": "2026-11-24T17:56:54.266274+00:00",
+  "changed_files": [
+    "MacroBot.cpp"
+  ],
+  "changed_functions": {},
+  "build_config_changes": null,
+  "cpp_changed_lines": 14,
+  "dll_sha256": "5ab10b8b0a7139a37ac9e2ea23685d4a7aee9d8ea599983d48f00b190f302aba",
+  "macrobot_source_sha256": "f402e5f612ce3a272f9ecd88a28929e4ea468b8b27846865f7f0b46d56e2f372",
+  "diagnosis": "c5 lost every game because its opening was too slow against early Zealot rushes. Its army peaked at 2 to 4 units in all three trial games. The cannon and focus-fire changes never got a chance to matter. In matches 22 and 23 (Steamhammer and BananaBrain), our scouting Probe saw 2 Gateways, a Pylon and a Zealot in the enemy main at frame 3360 to 3480, with no Assimilator or Cybernetics Core. That is a two-Gateway Zealot rush. Even so, v3's rushSeen flag only fires once 2 Zealots are near our base, at frame 5300 to 5900. By then the second Gateway is only just being planned, and workers die fast: match 23 had 19 workers at 5400 and 0 at 6480. Gas also piled up to 256 that the bot never used, while Zealots were short of minerals. In the games where the scout saw a Core or Assimilator (match 18, match 24), the enemy played a tech opening and v3 survived to about frame 14500. Against PylonPuller (match 17) the scout saw a Forge and cannons, and v3 won.",
+  "hypothesis": "The scout already sees the rush legally, about 2000 frames earlier than the current trigger. Set rushSeen early when, before frame 5000, either of these is seen and no enemy Assimilator, Core, Forge, Refinery or Extractor has been seen: (a) 2 or more enemy Gateways or Barracks, or (b) a Zealot before frame 3800. That runs the existing rush response about 2000 frames sooner: Gateways 2 and 3 before the Core, and no greedy Nexus. Two smaller changes support it. While rushing and the army is under 6, Probes stop taking gas once 100 is banked, so minerals go to Zealots. Probes are held at 16 until 4 army units exist. Tech openings (Core or Forge seen) do not trigger this, so v3's play against PylonPuller and the Steamhammer and BananaBrain tech builds stays the same.",
+  "expectation": "When the scout sees two Gateways and no tech (the pattern in matches 22 and 23), we should have 3 Gateways producing Zealots by about frame 5000. We should have 4 to 6 Zealots when the rush arrives at about 5300 to 6900, instead of 2. Workers should stay above 12 at frame 7000, and the game should last past 9600 with a score above 40. That should beat c5's results there and be at least as good as v3's. Tech openings play exactly as in v3, so PylonPuller should still be won (about 90) and the tech-opening games should score about 50.",
+  "version": "v4",
+  "promoted_from": "c6",
+  "promoted_at": "2026-11-24T18:22:50.605027+00:00",
+  "verdict": {
+    "decision": "promoted",
+    "reason": "win_rate_improved",
+    "details": {
+      "compared_opponents": [
+        "PylonPuller",
+        "Steamhammer",
+        "BananaBrain"
+      ],
+      "champion_win_rate": 0.1667,
+      "challenger_win_rate": 0.3333,
+      "champion_loss_rate": 0.8333,
+      "challenger_loss_rate": 0.6667,
+      "champion_mean_score": 58.21,
+      "challenger_mean_score": 51.39,
+      "score_delta": -6.83,
+      "champion_fps": 23.79,
+      "challenger_fps": 23.77,
+      "per_opponent": {
+        "PylonPuller": {
+          "champion": {
+            "games": 2,
+            "wins": 1,
+            "losses": 1,
+            "inconclusive": 0,
+            "win_rate": 0.5,
+            "loss_rate": 0.5,
+            "mean_score": 74.61,
+            "mean_fps": 23.737
+          },
+          "challenger": {
+            "games": 1,
+            "wins": 0,
+            "losses": 1,
+            "inconclusive": 0,
+            "win_rate": 0.0,
+            "loss_rate": 1.0,
+            "mean_score": 44.99,
+            "mean_fps": 23.819
+          }
+        },
+        "Steamhammer": {
+          "champion": {
+            "games": 1,
+            "wins": 0,
+            "losses": 1,
+            "inconclusive": 0,
+            "win_rate": 0.0,
+            "loss_rate": 1.0,
+            "mean_score": 53.33,
+            "mean_fps": 23.818
+          },
+          "challenger": {
+            "games": 1,
+            "wins": 1,
+            "losses": 0,
+            "inconclusive": 0,
+            "win_rate": 1.0,
+            "loss_rate": 0.0,
+            "mean_score": 93.46,
+            "mean_fps": 23.662
+          }
+        },
+        "BananaBrain": {
+          "champion": {
+            "games": 2,
+            "wins": 0,
+            "losses": 2,
+            "inconclusive": 0,
+            "win_rate": 0.0,
+            "loss_rate": 1.0,
+            "mean_score": 46.7,
+            "mean_fps": 23.816
+          },
+          "challenger": {
+            "games": 1,
+            "wins": 0,
+            "losses": 1,
+            "inconclusive": 0,
+            "win_rate": 0.0,
+            "loss_rate": 1.0,
+            "mean_score": 15.71,
+            "mean_fps": 23.828
+          }
+        }
+      }
+    }
+  }
+}

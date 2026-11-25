@@ -1,0 +1,46 @@
+--- v5/MacroBot.cpp
++++ c10/MacroBot.cpp
+@@ -298,7 +298,9 @@
+     bool detection=cloakSeen || cloakTechSeen;
+     // Scouted rush: Assimilator and Core wait for the first Zealots (or frame 6500); minerals buy Zealots.
+     bool rushHold=rushSeen && !detection && frame<6500 && army.size()<4;
+-    if(detection && count(Protoss_Forge)==0) return Protoss_Forge;
++    // A Robotics Facility already under way: its Observatory comes before the Forge detour.
++    bool roboFirst=count(Protoss_Robotics_Facility)>0 && count(Protoss_Observatory)==0;
++    if(detection && !roboFirst && count(Protoss_Forge)==0) return Protoss_Forge;
+     if(detection && count(Protoss_Forge,true) && count(Protoss_Photon_Cannon)<int(nexuses.size())*cfg.cannons_per_base && frame>=cannonBlockedUntil) return Protoss_Photon_Cannon;
+     if(count(Protoss_Assimilator)==0 && early(cfg.proactive_observer_frame)) return Protoss_Assimilator;
+     if(count(Protoss_Assimilator)==0 && !rushHold && (count(Protoss_Zealot)>=cfg.gas1_zealots || frame>cfg.gas1_frame || detection)) return Protoss_Assimilator;
+@@ -308,6 +310,8 @@
+     /*+*/if(core && early(cfg.proactive_observer_frame) && count(Protoss_Robotics_Facility)==0) return Protoss_Robotics_Facility;/*-*/
+     if(core && detection && count(Protoss_Robotics_Facility)==0) return Protoss_Robotics_Facility;
+     if(count(Protoss_Robotics_Facility,true) && count(Protoss_Observatory)==0) return Protoss_Observatory;
++    // Detection before the natural: DTs (match-40@10520) and Reavers arrive before a post-Nexus Robo can answer.
++    if(core && count(Protoss_Robotics_Facility)==0 && !homeThreat && frame>cfg.robo_frame && army.size()>=cfg.robo_army) return Protoss_Robotics_Facility;
+     if(!homeThreat && count(Protoss_Nexus)<2 && workers.size()>=cfg.expand2_workers && army.size()>=cfg.expand2_army && frame>cfg.expand2_frame && expansion().isValid()) return Protoss_Nexus;
+     int targetGates=std::min(cfg.gates_cap,cfg.gates_base+(workers.size()>=cfg.gates_bonus_workers?1:0)+cfg.gates_per_extra_base*std::max(0,int(nexuses.size())-1));
+     if(gates<targetGates && core && (me->minerals()>cfg.gate_minerals || army.size()>=cfg.gate_army)) return Protoss_Gateway;
+@@ -531,6 +535,10 @@
+     // Reserve only an actual building task, an urgent pylon, or an intentional expansion.
+     // Reserving every future 150-200 mineral structure was repeatedly idling the Nexus.
+     UnitType reserve=planned!=None?planned:((desired==Protoss_Nexus || (desired==Protoss_Pylon && me->supplyTotal()-me->supplyUsed()<=4))?desired:None);
++    // Tech gate: Zealot spending pushed the Core (match-40: placed 5736 vs 4296 in the won match-30) and
++    // Robo/Observatory past the DT timing. Hold their price while no enemy is at home.
++    bool techStep=desired==Protoss_Cybernetics_Core || desired==Protoss_Robotics_Facility || desired==Protoss_Observatory;
++    if(reserve==None && techStep && detectStep==None && !homeThreat) reserve=desired;
+     cash=me->minerals()-(reserve!=None?reserve.mineralPrice():0);
+     gas=me->gas()-(reserve!=None?reserve.gasPrice():0);
+     if(detectStep!=None && detectStep!=Protoss_Observer) {
+--- v5/build_config.json
++++ c10/build_config.json
+@@ -24,8 +24,8 @@
+   "dragoon_zealot_floor": 3,
+   "range_after_dragoons": 1,
+   "weapons_army": 10,
+-  "robo_frame": 9000,
+-  "robo_army": 10,
++  "robo_frame": 7800,
++  "robo_army": 8,
+   "observers_base": 1,
+   "observers_alert": 2,
+   "reavers_max": 2,

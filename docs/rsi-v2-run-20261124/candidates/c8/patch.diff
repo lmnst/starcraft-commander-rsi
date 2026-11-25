@@ -1,0 +1,40 @@
+--- v5/MacroBot.cpp
++++ c8/MacroBot.cpp
+@@ -39,7 +39,9 @@
+   bool attacking = false, cloakSeen = false, cloakTechSeen = false, rushSeen = false;
+   // Scouted opening signals (legal sightings only): mass-gateway with no tech building => zealot rush.
+   std::set<int> enemyGateIds;
+-  bool enemyTechSeen = false, earlyZealotSeen = false;
++  bool enemyTechSeen = false, earlyZealotSeen = false, enemyProtoss = false;
++  // Protoss zealot openers follow up with Dark Templar: a Forge and a Nexus cannon once the Core is placed.
++  bool dtGuard() const { return rushSeen && enemyProtoss && frame>=5400; }
+   // Unscouted enemies still build an army: floor the remembered power with a time-based estimate.
+   double enemyEstimate() const { return std::max(rememberedEnemyPower(),std::max(0.0,(frame-4500)/240.0)); }
+   Unit homeThreat = nullptr;
+@@ -205,6 +207,7 @@
+       if(t==Protoss_Gateway || t==Terran_Barracks) enemyGateIds.insert(u->getID());
+       if(t==Protoss_Assimilator || t==Protoss_Cybernetics_Core || t==Protoss_Forge || t==Terran_Refinery || t==Zerg_Extractor) enemyTechSeen=true;
+       if(t==Protoss_Zealot && frame<3800) earlyZealotSeen=true;
++      if(t.getRace()==Races::Protoss) enemyProtoss=true;
+     }
+     if(!rushSeen && frame<5000 && !enemyTechSeen && (enemyGateIds.size()>=2 || earlyZealotSeen)) {
+       rushSeen=true;
+@@ -303,12 +306,15 @@
+     if(count(Protoss_Assimilator)==0 && early(cfg.proactive_observer_frame)) return Protoss_Assimilator;
+     if(count(Protoss_Assimilator)==0 && !rushHold && (count(Protoss_Zealot)>=cfg.gas1_zealots || frame>cfg.gas1_frame || detection)) return Protoss_Assimilator;
+     if(count(Protoss_Assimilator)>0 && core==0 && !rushHold) return Protoss_Cybernetics_Core;
+-    if(core>0 && early(cfg.proactive_cannon_frame) && count(Protoss_Forge)==0) return Protoss_Forge;
+-    if(core>0 && early(cfg.proactive_cannon_frame) && count(Protoss_Forge,true) && count(Protoss_Photon_Cannon)<int(nexuses.size())*cfg.cannons_per_base && frame>=cannonBlockedUntil) return Protoss_Photon_Cannon;
++    bool cannonPlan=early(cfg.proactive_cannon_frame) || dtGuard();
++    if(core>0 && cannonPlan && count(Protoss_Forge)==0) return Protoss_Forge;
++    if(core>0 && cannonPlan && count(Protoss_Forge,true) && count(Protoss_Photon_Cannon)<int(nexuses.size())*cfg.cannons_per_base && frame>=cannonBlockedUntil) return Protoss_Photon_Cannon;
+     /*+*/if(core && early(cfg.proactive_observer_frame) && count(Protoss_Robotics_Facility)==0) return Protoss_Robotics_Facility;/*-*/
+     if(core && detection && count(Protoss_Robotics_Facility)==0) return Protoss_Robotics_Facility;
+     if(count(Protoss_Robotics_Facility,true) && count(Protoss_Observatory)==0) return Protoss_Observatory;
+-    if(!homeThreat && count(Protoss_Nexus)<2 && workers.size()>=cfg.expand2_workers && army.size()>=cfg.expand2_army && frame>cfg.expand2_frame && expansion().isValid()) return Protoss_Nexus;
++    // Cloak seen with no detector finished: detection before a greedy Nexus.
++    bool blind=detection && count(Protoss_Photon_Cannon,true)==0 && count(Protoss_Observer,true)==0;
++    if(!homeThreat && !blind && count(Protoss_Nexus)<2 && workers.size()>=cfg.expand2_workers && army.size()>=cfg.expand2_army && frame>cfg.expand2_frame && expansion().isValid()) return Protoss_Nexus;
+     int targetGates=std::min(cfg.gates_cap,cfg.gates_base+(workers.size()>=cfg.gates_bonus_workers?1:0)+cfg.gates_per_extra_base*std::max(0,int(nexuses.size())-1));
+     if(gates<targetGates && core && (me->minerals()>cfg.gate_minerals || army.size()>=cfg.gate_army)) return Protoss_Gateway;
+     if(core && count(Protoss_Robotics_Facility)==0 && (frame>cfg.robo_frame && army.size()>=cfg.robo_army)) return Protoss_Robotics_Facility;

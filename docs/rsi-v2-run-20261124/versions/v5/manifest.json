@@ -1,0 +1,107 @@
+{
+  "candidate_id": "c7",
+  "parent": "v4",
+  "created_at": "2026-11-24T18:28:37.562116+00:00",
+  "changed_files": [
+    "MacroBot.cpp"
+  ],
+  "changed_functions": {},
+  "build_config_changes": null,
+  "cpp_changed_lines": 15,
+  "dll_sha256": "afabecfffbf59de1f8e9ad260367595c0b5e956b8205aea8bb117649d2ba2b45",
+  "macrobot_source_sha256": "219fd2ed513642c368b1fc60c818f82f0f120bd117b8960a9c6de9b2e4b1de50",
+  "diagnosis": "v4 (c6) now detects BananaBrain's zealot rush from the scout at frame 3272 (match-27). Even so, it had only 4 Zealots against 5 to 9 enemy Zealots and lost all its Probes by frame 6720. The rush response still spends minerals on things other than Zealots before the rush lands: the Assimilator (75), the Core at about 5100 (150), the third Gateway at 4128 when only 16 Probes can't feed 3 Gateways, plus Probes mining gas. Gas sat banked at 120 and unused all game. Our Zealots also fought out at the ramp, 420 px from home (match-27@5760), and died piecemeal. Only after that did the enemy reach the mineral line. PylonPuller (match-25 and match-28) and Steamhammer (match-26) never set rushSeen, so changes gated on rushSeen leave them alone.",
+  "hypothesis": "Once a rush has been scouted, before frame 6500 and with no cloak seen, spend nothing on tech until 4 army units exist. That means no Assimilator, no Core, and 0 gas Probes until the Core exists. The third Gateway is only built when minerals are at least 200. That turns about 225 or more minerals into one or two extra Zealots before frame 5600. In combat, when there is a home threat, our army is under 8, and threatPower is more than 1.2 times homePower, units don't chase targets more than 260 px from our bases. They regroup 96 px from home, so Zealots fight next to the Probes and the defending workers instead of alone at the ramp.",
+  "expectation": "BananaBrain rush games: 5 to 6 Zealots at about 5600 instead of 4, the fight happens at our mineral line, and the game lasts past 9000 with a score above 30 (v4 got 15.7). Non-rush games behave exactly like v4, so the Steamhammer win (93) is kept and PylonPuller scores about 45 to 58. The combat clause only fires when we are outnumbered at home.",
+  "version": "v5",
+  "promoted_from": "c7",
+  "promoted_at": "2026-11-24T18:58:16.241690+00:00",
+  "verdict": {
+    "decision": "promoted",
+    "reason": "win_rate_improved",
+    "details": {
+      "compared_opponents": [
+        "PylonPuller",
+        "Steamhammer",
+        "BananaBrain"
+      ],
+      "champion_win_rate": 0.1667,
+      "challenger_win_rate": 0.3333,
+      "champion_loss_rate": 0.8333,
+      "challenger_loss_rate": 0.6667,
+      "champion_mean_score": 44.54,
+      "challenger_mean_score": 70.08,
+      "score_delta": 25.55,
+      "champion_fps": 23.8,
+      "challenger_fps": 23.69,
+      "per_opponent": {
+        "PylonPuller": {
+          "champion": {
+            "games": 1,
+            "wins": 0,
+            "losses": 1,
+            "inconclusive": 0,
+            "win_rate": 0.0,
+            "loss_rate": 1.0,
+            "mean_score": 44.99,
+            "mean_fps": 23.819
+          },
+          "challenger": {
+            "games": 1,
+            "wins": 0,
+            "losses": 1,
+            "inconclusive": 0,
+            "win_rate": 0.0,
+            "loss_rate": 1.0,
+            "mean_score": 71.3,
+            "mean_fps": 23.813
+          }
+        },
+        "Steamhammer": {
+          "champion": {
+            "games": 2,
+            "wins": 1,
+            "losses": 1,
+            "inconclusive": 0,
+            "win_rate": 0.5,
+            "loss_rate": 0.5,
+            "mean_score": 72.91,
+            "mean_fps": 23.741
+          },
+          "challenger": {
+            "games": 1,
+            "wins": 1,
+            "losses": 0,
+            "inconclusive": 0,
+            "win_rate": 1.0,
+            "loss_rate": 0.0,
+            "mean_score": 93.4,
+            "mean_fps": 23.638
+          }
+        },
+        "BananaBrain": {
+          "champion": {
+            "games": 1,
+            "wins": 0,
+            "losses": 1,
+            "inconclusive": 0,
+            "win_rate": 0.0,
+            "loss_rate": 1.0,
+            "mean_score": 15.71,
+            "mean_fps": 23.828
+          },
+          "challenger": {
+            "games": 1,
+            "wins": 0,
+            "losses": 1,
+            "inconclusive": 0,
+            "win_rate": 0.0,
+            "loss_rate": 1.0,
+            "mean_score": 45.55,
+            "mean_fps": 23.606
+          }
+        }
+      }
+    }
+  }
+}

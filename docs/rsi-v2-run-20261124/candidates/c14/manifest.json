@@ -1,0 +1,16 @@
+{
+  "candidate_id": "c14",
+  "parent": "v6",
+  "created_at": "2026-11-24T22:23:25.461379+00:00",
+  "changed_files": [
+    "MacroBot.cpp"
+  ],
+  "changed_functions": {},
+  "build_config_changes": null,
+  "cpp_changed_lines": 16,
+  "dll_sha256": "1af17005a49ed519aee26311789966b237aa439f538b04137bbed49c7ed99307",
+  "macrobot_source_sha256": "814409a3458ab4c747ed00037528ddc0e1ff57ae9874ac028ddc087c6e665fa7",
+  "diagnosis": "The Champion loses through combat and engagement behaviour more than through its build. (1) match-56, v6 vs Steamhammer: the Zealots kept walking 800\u20131100 px out to mid-map to chase raiders at 5640\u20136840 (zone mid_map, engaged 4 vs 6). They came home with only 3 of 6 healthy, and then 7 Zealots were wiped at 7560\u20137680 against 7\u20138 enemy Zealots. (2) match-53 (c13) vs PylonPuller: attack_start fired at 8240 with mine=19 and theirs=0, because nothing had been sighted yet. The army walked into 6+ Dragoons, attack_stop came at 9472, and the bot never recovered (the enemy reached 18 Dragoons and 2 Reavers). (3) match-48 vs BananaBrain: 2 Zealots arrived at 4320 with only 1 own Zealot home. Worker defense sent just 4 Probes at a time and lost 8 Probes in 700 frames (13 down to 5) without a kill.",
+  "hypothesis": "Three C++ changes, 16 lines. (a) Attack gate: the enemy power used is the larger of remembered power and min(enemyEstimate, 12). An enemy we have not scouted no longer counts as an empty army, so 8 units no longer charge an unscouted Protoss at 8240. (b) Leash: when we are not attacking and there is no home threat, units do not chase armed non-worker targets more than 560 px from our bases; they move to the rally instead. The army then stays whole for the defensive fight beside the Nexus, Probes and reinforcements, where the existing home-fight logic applies. (c) Worker defense: when exactly 2 enemy raiders are at home, the frame is before 7000 and we have fewer than 2 warriors, commit 7 Probes instead of 4. That wins the fight in one go instead of feeding Probes 4 at a time.",
+  "expectation": "Steamhammer: no mid-map Zealot bleeding between 5600 and 6900. Its push at about 7200 meets 7 or more healthy Zealots plus a Dragoon at home, and the bot survives past 9360 with a score above 40. PylonPuller: the first attack waits until the army is about 21 power or more, or the enemy has been scouted. There is no early throw-away at 8240, so the game should develop like match-52 (a win, score above 75). BananaBrain: the 2-Zealot raid at about 4300 is held with fewer Probe losses (workers stay at 10 or more at 5000 instead of 5), and the score rises above 20."
+}

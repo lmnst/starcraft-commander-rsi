@@ -1,0 +1,298 @@
+--- versions/v1/MacroBot.cpp
++++ versions/v8/MacroBot.cpp
+@@ -36,8 +36,14 @@
+   TilePosition buildTile = TilePositions::Invalid;
+   int planFrame = 0, frame = 0, cash = 0, gas = 0;
+   int rangeStart = -1;
+-  bool attacking = false, cloakSeen = false, cloakTechSeen = false;
++  bool attacking = false, cloakSeen = false, cloakTechSeen = false, rushSeen = false;
++  // Scouted opening signals (legal sightings only): mass-gateway with no tech building => zealot rush.
++  std::set<int> enemyGateIds;
++  bool enemyTechSeen = false, earlyZealotSeen = false;
++  // Unscouted enemies still build an army: floor the remembered power with a time-based estimate.
++  double enemyEstimate() const { return std::max(rememberedEnemyPower(),std::max(0.0,(frame-4500)/240.0)); }
+   Unit homeThreat = nullptr;
++  double threatPower = 0, homePower = 0;
+   std::ofstream trace;
+   int cannonBlockedUntil = -1;
+   std::map<std::pair<int,int>, int> failedExpansions;
+@@ -55,6 +61,37 @@
+   std::vector<UndetectedSnapshot> undetectedSnapshots;
+   std::map<int, Position> ownPositions;
+   int enemySnapshotFrame = -1;
++  // Remembered enemy combat units (legal sightings only): id -> (type, last seen frame).
++  std::map<int, std::pair<UnitType,int>> enemyArmyMemory;
++  // Cloaked/burrowed ground attackers (legal sightings only): id -> (last position, frame). Observers hunt these.
++  std::map<int, std::pair<Position,int>> cloakMemory;
++  // First Nexus lacking both a Photon Cannon and a Pylon nearby (cannon there needs power first).
++  Unit bareNexus() const {
++    for(auto n:nexuses) {
++      bool cannon=false,pylon=false;
++      for(auto u:own) {
++        if(u->getType()==Protoss_Photon_Cannon && u->getDistance(n)<300) cannon=true;
++        if(u->getType()==Protoss_Pylon && u->getDistance(n)<224) pylon=true;
++      }
++      if(!cannon) return pylon?nullptr:n;
++    }
++    return nullptr;
++  }
++  double typeValue(UnitType t) const {
++    if(t.isWorker() || t.isBuilding() || t==Protoss_Interceptor || t==Protoss_Scarab || t==Zerg_Larva || t==Zerg_Egg) return 0;
++    if(!t.canAttack() && t!=Protoss_Reaver && t!=Protoss_Carrier) return 0;
++    if(t==Protoss_Zealot) return 2.0;
++    if(t==Protoss_Dragoon) return 3.0;
++    if(t==Protoss_Reaver) return 7.0;
++    if(t==Protoss_Dark_Templar) return 3.5;
++    if(t==Protoss_Archon) return 6.0;
++    return std::max(0.5,(t.mineralPrice()+t.gasPrice())/60.0);
++  }
++  double rememberedEnemyPower() const {
++    double sum=0;
++    for(const auto &e:enemyArmyMemory) if(frame-e.second.second<3600) sum+=typeValue(e.second.first);
++    return sum;
++  }
+   //@config-begin
+   struct BuildConfig {
+ #define MACRO_DECLARE(name) int name=0;
+@@ -178,6 +215,16 @@
+       }
+       if(!u->isDetected() && !u->isFlying() && t.canAttack())
+         undetectedSnapshots.push_back({u->getID(),t,u->getPosition()});
++      if((u->isCloaked() || u->isBurrowed() || t==Protoss_Dark_Templar) && !u->isFlying() && t.canAttack())
++        cloakMemory[u->getID()]={u->getPosition(),frame};
++      if(u->isCompleted() && typeValue(t)>0) enemyArmyMemory[u->getID()]={t,frame};
++      if(t==Protoss_Gateway || t==Terran_Barracks) enemyGateIds.insert(u->getID());
++      if(t==Protoss_Assimilator || t==Protoss_Cybernetics_Core || t==Protoss_Forge || t==Terran_Refinery || t==Zerg_Extractor) enemyTechSeen=true;
++      if(t==Protoss_Zealot && frame<3800) earlyZealotSeen=true;
++    }
++    if(!rushSeen && frame<5000 && !enemyTechSeen && (enemyGateIds.size()>=2 || earlyZealotSeen)) {
++      rushSeen=true;
++      trace<<"{\"event\":\"rush_seen\",\"frame\":"<<frame<<",\"units\":0,\"source\":\"scout\",\"gates\":"<<enemyGateIds.size()<<"}\n";
+     }
+     for(auto it=enemyBuildings.begin();it!=enemyBuildings.end();) {
+       bool seen=false; for(auto e:enemies) if(e->getID()==it->first) seen=true;
+@@ -189,6 +236,19 @@
+       double score=baseDistance(e->getPosition());
+       if(e->getType()==Protoss_Photon_Cannon) score-=150;
+       if(score<best) {best=score;homeThreat=e;}
++    }
++    // Ground pressure at our bases versus the army standing there (drives rush response).
++    threatPower=0; homePower=0; int rushers=0;
++    for(auto e:enemies) {
++      UnitType t=e->getType();
++      if(t.isWorker() || t.isBuilding() || e->isFlying()) continue;
++      if(baseDistance(e->getPosition())<700) threatPower+=power(e);
++      if(frame<6500 && (t==Protoss_Zealot || t==Zerg_Zergling || t==Terran_Marine) && e->getPosition().getDistance(home)<1600) ++rushers;
++    }
++    for(auto u:army) if(baseDistance(u->getPosition())<700) homePower+=power(u);
++    if(rushers>=2 && !rushSeen) {
++      rushSeen=true;
++      trace<<"{\"event\":\"rush_seen\",\"frame\":"<<frame<<",\"units\":"<<rushers<<"}\n";
+     }
+   }
+   bool freeSite(TilePosition t,UnitType type) const {
+@@ -229,6 +289,8 @@
+       bool occupied=false;
+       for(auto n:own) if(n->getType()==Protoss_Nexus && n->getDistance(p)<240) occupied=true;
+       for(auto e:enemies) if(e->getDistance(p)<400 && e->getType().canAttack()) occupied=true;
++      // A remembered enemy building on the site (match-82@12504..18000: 400 minerals parked on taken bases).
++      for(const auto &b:enemyBuildings) if(b.second.getDistance(p)<320) occupied=true;
+       auto failIt = failedExpansions.find({t.x, t.y});
+       if(failIt != failedExpansions.end() && frame < failIt->second) continue;
+       if(occupied) continue;
+@@ -247,17 +309,28 @@
+     if(count(Protoss_Pylon,true)==0) return None;
+     if(gates<1) return Protoss_Gateway;
+     if(gates<2 && workers.size()>=cfg.gate2_workers) return Protoss_Gateway;
++    // Early zealot/ling/marine pressure seen: a third Gateway before tech, no greedy Nexus.
++    if(rushSeen && gates<2) return Protoss_Gateway;
++    // Third Gateway only from floating minerals: with ~16 Probes two Gateways already use the income.
++    if(rushSeen && gates<3 && frame<9000 && workers.size()>=12 && me->minerals()>=200) return Protoss_Gateway;
+     bool detection=cloakSeen || cloakTechSeen;
+-    if(detection && count(Protoss_Forge)==0) return Protoss_Forge;
++    // Scouted rush: Assimilator and Core wait for the first Zealots (or frame 6500); minerals buy Zealots.
++    bool rushHold=rushSeen && !detection && frame<6500 && army.size()<4;
++    // A Robotics Facility already under way: its Observatory comes before the Forge detour.
++    bool roboFirst=count(Protoss_Robotics_Facility)>0 && count(Protoss_Observatory)==0;
++    if(detection && !roboFirst && count(Protoss_Forge)==0) return Protoss_Forge;
++    if(detection && count(Protoss_Forge,true) && count(Protoss_Photon_Cannon)<int(nexuses.size())*cfg.cannons_per_base && frame>=cannonBlockedUntil && bareNexus()) return Protoss_Pylon;
+     if(detection && count(Protoss_Forge,true) && count(Protoss_Photon_Cannon)<int(nexuses.size())*cfg.cannons_per_base && frame>=cannonBlockedUntil) return Protoss_Photon_Cannon;
+     if(count(Protoss_Assimilator)==0 && early(cfg.proactive_observer_frame)) return Protoss_Assimilator;
+-    if(count(Protoss_Assimilator)==0 && (count(Protoss_Zealot)>=cfg.gas1_zealots || frame>cfg.gas1_frame || detection)) return Protoss_Assimilator;
+-    if(count(Protoss_Assimilator)>0 && core==0) return Protoss_Cybernetics_Core;
++    if(count(Protoss_Assimilator)==0 && !rushHold && (count(Protoss_Zealot)>=cfg.gas1_zealots || frame>cfg.gas1_frame || detection)) return Protoss_Assimilator;
++    if(count(Protoss_Assimilator)>0 && core==0 && !rushHold) return Protoss_Cybernetics_Core;
+     if(core>0 && early(cfg.proactive_cannon_frame) && count(Protoss_Forge)==0) return Protoss_Forge;
+     if(core>0 && early(cfg.proactive_cannon_frame) && count(Protoss_Forge,true) && count(Protoss_Photon_Cannon)<int(nexuses.size())*cfg.cannons_per_base && frame>=cannonBlockedUntil) return Protoss_Photon_Cannon;
+     /*+*/if(core && early(cfg.proactive_observer_frame) && count(Protoss_Robotics_Facility)==0) return Protoss_Robotics_Facility;/*-*/
+     if(core && detection && count(Protoss_Robotics_Facility)==0) return Protoss_Robotics_Facility;
+     if(count(Protoss_Robotics_Facility,true) && count(Protoss_Observatory)==0) return Protoss_Observatory;
++    // Detection before the natural: DTs (match-40@10520) and Reavers arrive before a post-Nexus Robo can answer.
++    if(core && count(Protoss_Robotics_Facility)==0 && !homeThreat && frame>cfg.robo_frame && army.size()>=cfg.robo_army) return Protoss_Robotics_Facility;
+     if(!homeThreat && count(Protoss_Nexus)<2 && workers.size()>=cfg.expand2_workers && army.size()>=cfg.expand2_army && frame>cfg.expand2_frame && expansion().isValid()) return Protoss_Nexus;
+     int targetGates=std::min(cfg.gates_cap,cfg.gates_base+(workers.size()>=cfg.gates_bonus_workers?1:0)+cfg.gates_per_extra_base*std::max(0,int(nexuses.size())-1));
+     if(gates<targetGates && core && (me->minerals()>cfg.gate_minerals || army.size()>=cfg.gate_army)) return Protoss_Gateway;
+@@ -280,7 +353,7 @@
+           trace<<"{\"event\":\"cannon_skip\",\"frame\":"<<frame<<",\"reason\":\"plan_failed\",\"until\":"<<cannonBlockedUntil<<"}\n";
+         }
+         if(!started && planned==Protoss_Nexus && buildTile.isValid()) {
+-          failedExpansions[{buildTile.x, buildTile.y}] = frame + 1200;
++          failedExpansions[{buildTile.x, buildTile.y}] = frame + 3600;
+         }
+         if(trace) trace<<"{\"event\":\"plan_end\",\"frame\":"<<frame<<",\"started\":"<<(started?"true":"false")<<"}\n";
+         planned=None;builder=nullptr;
+@@ -299,6 +372,7 @@
+         }
+       } else {
+         if(type==Protoss_Pylon) for(auto u:own) if(u->getType().requiresPsi() && u->isCompleted() && !u->isPowered()) {anchor=u->getPosition();break;}
++        if(type==Protoss_Pylon && (cloakSeen || cloakTechSeen) && count(Protoss_Forge,true)) {Unit b=bareNexus(); if(b) anchor=b->getPosition();}
+         if(type==Protoss_Photon_Cannon) {
+           anchor=home;
+           for(auto n:nexuses) {bool covered=false;for(auto u:own) if(u->getType()==Protoss_Photon_Cannon && u->getDistance(n)<300) covered=true;
+@@ -307,7 +381,7 @@
+         tile=findSite(type,anchor);
+       }
+       if(!tile.isValid()) {
+-        if(type==Protoss_Photon_Cannon) {
++        if(type==Protoss_Photon_Cannon || type==Protoss_Pylon) {
+           cannonBlockedUntil=frame+cannonRetryDelay;
+           trace<<"{\"event\":\"cannon_skip\",\"frame\":"<<frame<<",\"reason\":\"no_site\",\"until\":"<<cannonBlockedUntil<<"}\n";
+         }
+@@ -436,6 +510,8 @@
+     std::map<int,int> assigned;
+     for(auto w:workers) if(w->getOrderTarget()) assigned[w->getOrderTarget()->getID()]++;
+     int gasTarget=me->gas()<cfg.gas_bank_full?cfg.gas_workers_full:(me->gas()<cfg.gas_bank_reduced?cfg.gas_workers_reduced:0);
++    // Against an early zealot/ling/marine rush, minerals buy the defending warriors; bank only a little gas.
++    if(rushSeen && frame<8000 && army.size()<6 && (me->gas()>=100 || count(Protoss_Cybernetics_Core)==0)) gasTarget=0;
+     for(auto w:workers) {
+       if(w==builder || w==scout || defenders.count(w->getID()) || w->isConstructing()) continue;
+       if(!commandReady(w,24)) continue;
+@@ -479,6 +555,13 @@
+     // Reserve only an actual building task, an urgent pylon, or an intentional expansion.
+     // Reserving every future 150-200 mineral structure was repeatedly idling the Nexus.
+     UnitType reserve=planned!=None?planned:((desired==Protoss_Nexus || (desired==Protoss_Pylon && me->supplyTotal()-me->supplyUsed()<=4))?desired:None);
++    // Tech gate: Zealot spending pushed the Core (match-40: placed 5736 vs 4296 in the won match-30) and
++    // Robo/Observatory past the DT timing. Hold their price while no enemy is at home.
++    bool techStep=desired==Protoss_Cybernetics_Core || desired==Protoss_Robotics_Facility || desired==Protoss_Observatory;
++    if(reserve==None && techStep && detectStep==None && !homeThreat) reserve=desired;
++    // Second Gateway: match-84 wanted it from 3240 but Zealots/Probes ate every mineral until 4632,
++    // so BananaBrain's 3-Zealot hit at 4680 met one Gateway. Hold its price like a tech step.
++    if(reserve==None && desired==Protoss_Gateway && count(Protoss_Gateway)<2) reserve=desired;
+     cash=me->minerals()-(reserve!=None?reserve.mineralPrice():0);
+     gas=me->gas()-(reserve!=None?reserve.gasPrice():0);
+     if(detectStep!=None && detectStep!=Protoss_Observer) {
+@@ -487,7 +570,15 @@
+     int workerGoal=std::min(cfg.probes_cap,cfg.probes_first_base+cfg.probes_per_extra_base*std::max(0,int(nexuses.size())-1));
+     // Maintain economic growth; the first two Zealots still get an emergency priority.
+     if(homeThreat && army.size()<2) for(auto u:own) if(u->getType()==Protoss_Gateway && u->isCompleted() && u->isPowered() && u->isIdle()) train(u,Protoss_Zealot);
+-    for(auto n:nexuses) if(n->isIdle() && queued(Protoss_Probe)<workerGoal) train(n,Protoss_Probe);
++    // Under early pressure, fund warriors before Probes until the army can hold.
++    bool holdProbes=rushSeen && army.size()<5 && frame<9000 && workers.size()>=12 && (homeThreat || threatPower>homePower);
++    // Scouted rush: cap Probes at 16 until a few Zealots are out, so the extra Gateways stay busy.
++    if(rushSeen && frame<7000 && army.size()<4 && workers.size()>=16) holdProbes=true;
++    if(holdProbes) for(auto u:own) if(u->getType()==Protoss_Gateway && u->isCompleted() && u->isPowered() && u->isIdle()) {
++      bool goon=count(Protoss_Cybernetics_Core,true) && gas>=50 && cash>=125;
++      train(u,goon?Protoss_Dragoon:Protoss_Zealot);
++    }
++    if(!holdProbes) for(auto n:nexuses) if(n->isIdle() && queued(Protoss_Probe)<workerGoal) train(n,Protoss_Probe);
+     bool rangeNeeded=detectStep==None && count(Protoss_Dragoon)>=cfg.range_after_dragoons && !me->getUpgradeLevel(UpgradeTypes::Singularity_Charge) && !me->isUpgrading(UpgradeTypes::Singularity_Charge);
+     if(rangeNeeded) {
+       bool began=false;
+@@ -557,8 +648,19 @@
+     if(commandReady(u) && (u->getOrder()!=Orders::Move || u->isIdle() || u->getTargetPosition().getDistance(p)>48 || u->isStuck())) u->move(p);
+   }
+   void combat() {
+-    if(army.size()>=6) attacking=true;
+-    if(army.size()<3) attacking=false;
++    // Attack as a group only with a clear edge over the remembered enemy army;
++    // fall back to the rally when the edge is gone instead of trickling units away.
++    double mine=0; for(auto u:army) mine+=power(u);
++    double theirs=rememberedEnemyPower();
++    bool maxed=me->supplyUsed()>=340 || army.size()>=30;
++    if(!attacking && ((army.size()>=8 && mine>=theirs*1.4+4) || maxed)) {
++      attacking=true;
++      trace<<"{\"event\":\"attack_start\",\"frame\":"<<frame<<",\"mine\":"<<mine<<",\"theirs\":"<<theirs<<"}\n";
++    }
++    if(attacking && !maxed && (army.size()<4 || mine<theirs*0.9)) {
++      attacking=false;
++      trace<<"{\"event\":\"attack_stop\",\"frame\":"<<frame<<",\"mine\":"<<mine<<",\"theirs\":"<<theirs<<"}\n";
++    }
+     Position goal=homeThreat?homeThreat->getPosition():(attacking?objective():rally);
+     Position center=home;
+     if(!army.empty()){long x=0,y=0;for(auto u:army){x+=u->getPosition().x;y+=u->getPosition().y;}center=Position(int(x/army.size()),int(y/army.size()));}
+@@ -595,6 +697,10 @@
+       if(target && u->getType()==Protoss_Dragoon && u->getGroundWeaponCooldown()>6 && !target->isFlying() && u->getDistance(target)<(me->getUpgradeLevel(UpgradeTypes::Singularity_Charge)?170:105)) {
+         move(u,toward(u->getPosition(),target->getPosition(),-80));continue;
+       }
++      // Outnumbered at home: fight beside the Nexus and Probes, not piecemeal out at the ramp.
++      if(target && homeThreat && army.size()<8 && threatPower>homePower*1.2 && baseDistance(target->getPosition())>260 && baseDistance(u->getPosition())>200) {
++        move(u,toward(home,u->getPosition(),96));continue;
++      }
+       if(target) hit(u,target);
+       else if(undetectedThreat) {
+         // Do not chase an untargetable attacker while waiting for detection.
+@@ -603,10 +709,22 @@
+       else advance(u,goal);
+     }
+     int index=0;
++    // Observers hunt live cloaked attackers near our army or bases (match-61@12240: DT at the natural,
++    // both Observers parked in the main; match-64@12720: Observers drifted off the DTs and the army fled).
++    std::vector<Position> hunts;
++    for(const auto &c:cloakMemory) if(frame-c.second.second<=120) {
++      Position p=c.second.first;
++      if(baseDistance(p)<900 || p.getDistance(center)<700) hunts.push_back(p);
++    }
+     for(auto u:own) if(u->getType()==Protoss_Observer && u->isCompleted()) {
+-      Position destination=(index++==0 || !homeThreat)?toward(center,goal,64):homeThreat->getPosition();
++      int slot=index++;
++      Position destination=(slot==0 || !homeThreat)?toward(center,goal,64):homeThreat->getPosition();
++      if(!hunts.empty() && slot<2) {
++        double bd=1e18;
++        for(auto p:hunts) {double d=slot==0?p.getDistance(center):baseDistance(p); if(d<bd){bd=d;destination=p;}}
++      }
+       Unit danger=nullptr;
+-      for(auto e:enemies) if(e->getType().airWeapon()!=WeaponTypes::None && e->getDistance(u)<200 && e->isDetected()) {danger=e;break;}
++      for(auto e:enemies) if(e->getType().airWeapon()!=WeaponTypes::None && e->getDistance(u)<(hunts.empty()?200:120) && e->isDetected()) {danger=e;break;}
+       if(danger) destination=toward(u->getPosition(),danger->getPosition(),-96);
+       move(u,destination);
+     }
+@@ -660,6 +778,8 @@
+       [u](const UndetectedSnapshot &e){return e.id==u->getID();}),undetectedSnapshots.end());
+     ownPositions.erase(u->getID());
+     enemyBuildings.erase(u->getID());
++    enemyArmyMemory.erase(u->getID());
++    cloakMemory.erase(u->getID());
+     if(u->getType().isMineralField()) BWEM::Map::Instance().OnMineralDestroyed(u);
+     else if(u->getPlayer()==Broodwar->neutral() && u->getType().isBuilding()) BWEM::Map::Instance().OnStaticBuildingDestroyed(u);
+   }
+
+--- versions/v1/build_config.json
++++ versions/v8/build_config.json
+@@ -1,13 +1,13 @@
+ {
+-  "gate2_workers": 12,
++  "gate2_workers": 10,
+   "gates_base": 2,
+   "gates_bonus_workers": 18,
+   "gates_per_extra_base": 2,
+   "gates_cap": 8,
+   "gate_minerals": 180,
+   "gate_army": 6,
+-  "gas1_zealots": 3,
+-  "gas1_frame": 4400,
++  "gas1_zealots": 1,
++  "gas1_frame": 3200,
+   "gas_bank_full": 100,
+   "gas_workers_full": 3,
+   "gas_bank_reduced": 240,
+@@ -24,8 +24,8 @@
+   "dragoon_zealot_floor": 3,
+   "range_after_dragoons": 1,
+   "weapons_army": 10,
+-  "robo_frame": 9000,
+-  "robo_army": 10,
++  "robo_frame": 7800,
++  "robo_army": 8,
+   "observers_base": 1,
+   "observers_alert": 2,
+   "reavers_max": 2,

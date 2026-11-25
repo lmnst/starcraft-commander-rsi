@@ -1,0 +1,27 @@
+--- v7/MacroBot.cpp
++++ c17/MacroBot.cpp
+@@ -397,6 +397,13 @@
+     if(planned!=None && builder && commandReady(builder,24)) {
+       if(!builder->build(planned,buildTile)) {
+         std::string buildError=Broodwar->getLastError().toString();
++        // A Nexus site that is unbuildable with the builder on top of it will not clear by waiting: drop it at once
++        // (match-67@11520..15840: 600-frame retries on dead sites held 400 minerals while 3 Gateways idled).
++        if(planned==Protoss_Nexus && Broodwar->getLastError()==Errors::Unbuildable_Location && builder->getDistance(Position(buildTile)+Position(64,48))<256) {
++          failedExpansions[{buildTile.x,buildTile.y}]=frame+2400;
++          trace<<"{\"event\":\"plan_end\",\"frame\":"<<frame<<",\"started\":false,\"reason\":\"unbuildable\"}\n";
++          planned=None;builder=nullptr;return;
++        }
+         if(builder->getDistance(Position(buildTile)+Position(32,32))>80) builder->move(Position(buildTile)+Position(32,32));
+         if(frame%120==0) trace<<"{\"event\":\"build_wait\",\"frame\":"<<frame<<",\"error\":\""<<buildError<<"\"}\n";
+       }
+@@ -530,7 +537,9 @@
+     }
+   }
+   bool train(Unit u,UnitType type) {
+-    if(cash<type.mineralPrice() || gas<type.gasPrice() || !u->canTrain(type)) return false;
++    // Gas reservations (Singularity Charge, tech) may push gas below 0; that must not block gasless Zealots/Probes
++    // (match-66@6840..8160: gas pinned at 118 < 150 range reserve, 3 Gateways idle with 400-770 minerals).
++    if(cash<type.mineralPrice() || (type.gasPrice()>0 && gas<type.gasPrice()) || !u->canTrain(type)) return false;
+     if(u->train(type)){cash-=type.mineralPrice();gas-=type.gasPrice();return true;} return false;
+   }
+   bool upgrade(Unit u,UpgradeType type) {

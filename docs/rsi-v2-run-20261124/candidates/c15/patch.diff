@@ -1,0 +1,45 @@
+--- v6/MacroBot.cpp
++++ c15/MacroBot.cpp
+@@ -39,7 +39,9 @@
+   bool attacking = false, cloakSeen = false, cloakTechSeen = false, rushSeen = false;
+   // Scouted opening signals (legal sightings only): mass-gateway with no tech building => zealot rush.
+   std::set<int> enemyGateIds;
+-  bool enemyTechSeen = false, earlyZealotSeen = false;
++  bool enemyTechSeen = false, earlyZealotSeen = false, enemyCoreSeen = false;
++  // Scouted Protoss Core with no rush (match-58: Core@3480, DTs@8160 wiped the army): get detection early.
++  bool obsPrep() const { return early(cfg.proactive_observer_frame) || (enemyCoreSeen && !rushSeen && !earlyZealotSeen && frame>=4500); }
+   // Unscouted enemies still build an army: floor the remembered power with a time-based estimate.
+   double enemyEstimate() const { return std::max(rememberedEnemyPower(),std::max(0.0,(frame-4500)/240.0)); }
+   Unit homeThreat = nullptr;
+@@ -205,6 +207,7 @@
+       if(t==Protoss_Gateway || t==Terran_Barracks) enemyGateIds.insert(u->getID());
+       if(t==Protoss_Assimilator || t==Protoss_Cybernetics_Core || t==Protoss_Forge || t==Terran_Refinery || t==Zerg_Extractor) enemyTechSeen=true;
+       if(t==Protoss_Zealot && frame<3800) earlyZealotSeen=true;
++      if(t==Protoss_Cybernetics_Core || (t==Protoss_Dragoon && frame<7000)) enemyCoreSeen=true;
+     }
+     if(!rushSeen && frame<5000 && !enemyTechSeen && (enemyGateIds.size()>=2 || earlyZealotSeen)) {
+       rushSeen=true;
+@@ -302,12 +305,12 @@
+     bool roboFirst=count(Protoss_Robotics_Facility)>0 && count(Protoss_Observatory)==0;
+     if(detection && !roboFirst && count(Protoss_Forge)==0) return Protoss_Forge;
+     if(detection && count(Protoss_Forge,true) && count(Protoss_Photon_Cannon)<int(nexuses.size())*cfg.cannons_per_base && frame>=cannonBlockedUntil) return Protoss_Photon_Cannon;
+-    if(count(Protoss_Assimilator)==0 && early(cfg.proactive_observer_frame)) return Protoss_Assimilator;
++    if(count(Protoss_Assimilator)==0 && obsPrep()) return Protoss_Assimilator;
+     if(count(Protoss_Assimilator)==0 && !rushHold && (count(Protoss_Zealot)>=cfg.gas1_zealots || frame>cfg.gas1_frame || detection)) return Protoss_Assimilator;
+     if(count(Protoss_Assimilator)>0 && core==0 && !rushHold) return Protoss_Cybernetics_Core;
+     if(core>0 && early(cfg.proactive_cannon_frame) && count(Protoss_Forge)==0) return Protoss_Forge;
+     if(core>0 && early(cfg.proactive_cannon_frame) && count(Protoss_Forge,true) && count(Protoss_Photon_Cannon)<int(nexuses.size())*cfg.cannons_per_base && frame>=cannonBlockedUntil) return Protoss_Photon_Cannon;
+-    /*+*/if(core && early(cfg.proactive_observer_frame) && count(Protoss_Robotics_Facility)==0) return Protoss_Robotics_Facility;/*-*/
++    /*+*/if(core && obsPrep() && count(Protoss_Robotics_Facility)==0) return Protoss_Robotics_Facility;/*-*/
+     if(core && detection && count(Protoss_Robotics_Facility)==0) return Protoss_Robotics_Facility;
+     if(count(Protoss_Robotics_Facility,true) && count(Protoss_Observatory)==0) return Protoss_Observatory;
+     // Detection before the natural: DTs (match-40@10520) and Reavers arrive before a post-Nexus Robo can answer.
+@@ -522,7 +525,7 @@
+   void production() {
+     UnitType desired=nextBuilding();
+     UnitType detectStep=None;
+-    if(cloakSeen || cloakTechSeen/*+*/ || early(cfg.proactive_observer_frame)/*-*/) {
++    if(cloakSeen || cloakTechSeen/*+*/ || obsPrep()/*-*/) {
+       bool roboIdle=false;
+       for(auto u:own) if(u->getType()==Protoss_Robotics_Facility && u->isCompleted() && u->isPowered() && u->isIdle()) roboIdle=true;
+       if(roboIdle && count(Protoss_Observatory,true) && queued(Protoss_Observer)==0) detectStep=Protoss_Observer;

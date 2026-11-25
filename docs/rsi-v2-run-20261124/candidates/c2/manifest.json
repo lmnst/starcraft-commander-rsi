@@ -1,0 +1,22 @@
+{
+  "candidate_id": "c2",
+  "parent": "v2",
+  "created_at": "2026-11-24T15:47:00.593834+00:00",
+  "changed_files": [
+    "MacroBot.cpp",
+    "build_config.json"
+  ],
+  "changed_functions": {},
+  "build_config_changes": {
+    "gates_base": [
+      2,
+      3
+    ]
+  },
+  "cpp_changed_lines": 17,
+  "dll_sha256": "155f766e9ec6f522bbc0cb0ba124bc34a42e8d070ad4097cffc9700840d10c12",
+  "macrobot_source_sha256": "c87bba34cabb2057ff6f2e749406d286976dc34ba6529436d2a11b8dc30c672a",
+  "diagnosis": "Against BananaBrain (match 7), the bot stayed on one base for the whole game. From frame 8736 to 12600, expansion() kept choosing far-off bases one after another: (6,88), (85,96), (85,70), (7,55), (29,107). The build log shows Unbuildable_Location over and over. The cause is that expansion() skips the natural whenever enemy combat units are within 400px of it, so it falls back to distant sites. Each attempt holds a builder Probe for up to 600 frames, and production() reserves 400 minerals for the planned Nexus the whole time. That kept 450-670 minerals banked from frame 8880 to 12480. The bot also stayed at 3 Gateways and 23 workers while BananaBrain grew to 10+ Dragoons, and it was then overrun at frame 13000-14000. Steamhammer (match 6) followed the same pattern: one base until frame 11000, then the army was traded away while the economy was weak. Note that the build log is self-reported and diagnostic only.",
+  "hypothesis": "Two changes. (1) expansion() now always picks the nearest free base (closest by ground path). If enemy combat units are near that base, or a recent attempt there failed, it returns Invalid and waits. It no longer sends a Probe to a far site the enemy controls, and minerals are not reserved for a Nexus that cannot be built. Bases with a remembered enemy building are skipped. (2) gates_base goes from 2 to 3, so the minerals that are no longer stuck turn into a 4th Gateway after the worker bonus. That means more Dragoons when the enemy army is on our doorstep.",
+  "expectation": "Against BananaBrain: no Unbuildable_Location loops for a far Nexus; banked minerals between frames 9k and 12k stay under 300 instead of 450-670; the army peak goes above 18 with 4 Gateways; and the natural is taken once the enemy pressure leaves, or the bot at least holds longer with a better exchange ratio. Against Steamhammer: a similar or slightly earlier natural and a larger army. PylonPuller should be unaffected or win faster."
+}

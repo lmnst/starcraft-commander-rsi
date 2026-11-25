@@ -1,0 +1,117 @@
+{
+  "candidate_id": "c1",
+  "parent": "v1",
+  "created_at": "2026-11-24T15:10:08.881907+00:00",
+  "changed_files": [
+    "MacroBot.cpp",
+    "build_config.json"
+  ],
+  "changed_functions": {},
+  "build_config_changes": {
+    "gas1_zealots": [
+      3,
+      1
+    ],
+    "gas1_frame": [
+      4400,
+      3200
+    ]
+  },
+  "cpp_changed_lines": 34,
+  "dll_sha256": "844a6d785f5acad5074c7ae42ed7bba6c80c39031746540aa8252c2af9a35277",
+  "macrobot_source_sha256": "663f172e4e1b61a89f1bfcb1a3584002808c5507697b9bb17207deb144c8034e",
+  "diagnosis": "All three losses share one pattern: the bot attacks as soon as it has 6 units (attacking=true at army>=6, only cancelled below 3), so 6-8 Zealots with no range walk into an equal or larger enemy army near its base and die. Match-2@7920: our 9 units met 7 Dragoons, and by 10320 we had 4 units against 12. Match-3@7440-8160: 7 Zealots attacked 5 Dragoons and 2 Zealots and dropped to 5 units. Match-1@7680-8400: the army was near the enemy base when the DTs came out, then lost everything. The tech also comes late: gas only after 3 Zealots or frame 4400, so the Cybernetics Core finished around frame 6240-6840 and the first Dragoon around 7000.",
+  "hypothesis": "Two changes. (1) Start an attack only when we have at least 8 units and our army power is at least 1.4 times the remembered enemy army power plus 4. Enemy power is summed from enemy combat units we legally saw in the last 3600 frames; dead units are removed from the list. Fall back to the rally when our power drops below 0.9 times theirs or the army falls under 4 units. Always attack at 30 or more units or near max supply. (2) Take gas earlier (gas1_zealots 1, gas1_frame 3200) so Dragoons and range come about 1000 frames sooner. Together these should keep the army alive, avoid one-sided trades, and let the army grow until it can win the fight.",
+  "expectation": "Against Steamhammer and BananaBrain: fewer early army wipes, a higher healthy-army peak (more than 15 instead of 9-17), a better exchange ratio (above 0.4), and the Cybernetics Core done before frame 6000. PylonPuller should still be won by the same late push, since its army is small and the gate opens easily. Main risk: more time spent at home might raise lock_defense time.",
+  "version": "v2",
+  "promoted_from": "c1",
+  "promoted_at": "2026-11-24T15:37:26.816930+00:00",
+  "verdict": {
+    "decision": "promoted",
+    "reason": "win_rate_improved",
+    "details": {
+      "compared_opponents": [
+        "PylonPuller",
+        "Steamhammer",
+        "BananaBrain"
+      ],
+      "champion_win_rate": 0.1667,
+      "challenger_win_rate": 0.3333,
+      "champion_loss_rate": 0.8333,
+      "challenger_loss_rate": 0.6667,
+      "champion_mean_score": 54.03,
+      "challenger_mean_score": 69.82,
+      "score_delta": 15.79,
+      "champion_fps": 23.79,
+      "challenger_fps": 23.76,
+      "per_opponent": {
+        "PylonPuller": {
+          "champion": {
+            "games": 2,
+            "wins": 1,
+            "losses": 1,
+            "inconclusive": 0,
+            "win_rate": 0.5,
+            "loss_rate": 0.5,
+            "mean_score": 68.63,
+            "mean_fps": 23.738
+          },
+          "challenger": {
+            "games": 1,
+            "wins": 1,
+            "losses": 0,
+            "inconclusive": 0,
+            "win_rate": 1.0,
+            "loss_rate": 0.0,
+            "mean_score": 93.25,
+            "mean_fps": 23.654
+          }
+        },
+        "Steamhammer": {
+          "champion": {
+            "games": 2,
+            "wins": 0,
+            "losses": 2,
+            "inconclusive": 0,
+            "win_rate": 0.0,
+            "loss_rate": 1.0,
+            "mean_score": 43.77,
+            "mean_fps": 23.819
+          },
+          "challenger": {
+            "games": 1,
+            "wins": 0,
+            "losses": 1,
+            "inconclusive": 0,
+            "win_rate": 0.0,
+            "loss_rate": 1.0,
+            "mean_score": 63.69,
+            "mean_fps": 23.814
+          }
+        },
+        "BananaBrain": {
+          "champion": {
+            "games": 1,
+            "wins": 0,
+            "losses": 1,
+            "inconclusive": 0,
+            "win_rate": 0.0,
+            "loss_rate": 1.0,
+            "mean_score": 49.7,
+            "mean_fps": 23.818
+          },
+          "challenger": {
+            "games": 1,
+            "wins": 0,
+            "losses": 1,
+            "inconclusive": 0,
+            "win_rate": 0.0,
+            "loss_rate": 1.0,
+            "mean_score": 52.52,
+            "mean_fps": 23.814
+          }
+        }
+      }
+    }
+  }
+}

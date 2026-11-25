@@ -1,0 +1,16 @@
+{
+  "candidate_id": "c19",
+  "parent": "v7",
+  "created_at": "2026-11-25T01:30:10.309616+00:00",
+  "changed_files": [
+    "MacroBot.cpp"
+  ],
+  "changed_functions": {},
+  "build_config_changes": null,
+  "cpp_changed_lines": 18,
+  "dll_sha256": "5b418581c5134579400abd9c4fcdd8f141eb4fd36b7875d06664a32c8b3ffc55",
+  "macrobot_source_sha256": "9eff058984e4bff7a3a80d79f709e0f6359736e844cc2fd6acdad3d5c6f82120",
+  "diagnosis": "v7 loses to BananaBrain and Steamhammer when they rush with Gateway units early. The L0 rows show three separate failures. (1) In match-66 between frames 6000 and 8160, three of our five units chased a single Zealot all the way into the enemy main, about 3000 px from home, and died there. In match-72 between 4800 and 5760, two Zealots did the same thing. The combat loop has no leash when the army is not attacking. (2) In match-72, rushSeen caps the gas bank near 100. The 150-gas Singularity Charge reservation therefore could never be paid. It froze 150 minerals and all Dragoon gas, and banked gas sat at 118 from frame 5040 to 7920. Three Gateways were idle with up to 741 minerals banked, and the army stayed at 5 until enemy Dragoons wiped it at 7680 to 8640. (3) In match-75 between 6000 and 6360, four Zealots attacked our mineral line. The 'outnumbered at home' rule pulled our Zealots back toward the Nexus once the target was more than 260 px from the base, while 4 Probes fought in the 420 px defense radius alone. Workers fell from 16 to 7. The two previous rejects (c17, c18) both lost PylonPuller. That came mainly from c18's cannon-opening detour, which delayed the army to 2 units until 7680. I have not ruled out c17's train() gas check, which I keep here, as also playing a part.",
+  "hypothesis": "This round makes a combat and economy change instead of another tech-path tweak. It has 18 changed lines, and every change only removes a waste. (a) Leash: when we are not attacking and there is no home threat, a unit more than 900 px from our bases whose target is also more than 800 px away goes back to the rally instead of chasing. (b) Under a scouted rush (rushSeen, frame < 8000, army < 6), Singularity Charge is not reserved. That gas and those minerals go to Dragoons and Zealots, and the upgrade still starts once 6 units exist or the frame passes 8000. (c) train() only checks gas for units that cost gas, so a negative gas budget no longer idles Zealot production. (d) The rule that pulls outnumbered units back toward the Nexus now uses defenseRadius (420) instead of 260, so Zealots fight next to the Probes that are already defending. Nothing changes when there is no rush and the army is attacking, so PylonPuller's macro win path (match-76) is unchanged apart from the leash. The leash is inactive while attacking.",
+  "expectation": "BananaBrain: the army at 7600 should be 7 or more instead of 5, with 2+ Dragoons. Fewer Probes should be lost in the first Zealot raid, with workers at 6400 of 12 or more instead of 7. Expected L0 score 40 or higher, and it may survive past 9000. Steamhammer: units stop dying in the enemy main around 6000 to 8000, and the army is 8 or more at 8640 instead of 3. Survival past 14400 is likely, as is a possible win. PylonPuller: unchanged, a win with a score of about 85. FPS should not change, because the edits add only constant-time checks."
+}

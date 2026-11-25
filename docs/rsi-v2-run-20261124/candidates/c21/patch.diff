@@ -1,0 +1,39 @@
+--- v7/MacroBot.cpp
++++ c21/MacroBot.cpp
+@@ -289,6 +289,8 @@
+       bool occupied=false;
+       for(auto n:own) if(n->getType()==Protoss_Nexus && n->getDistance(p)<240) occupied=true;
+       for(auto e:enemies) if(e->getDistance(p)<400 && e->getType().canAttack()) occupied=true;
++      // A remembered enemy building on the site (match-82@12504..18000: 400 minerals parked on taken bases).
++      for(const auto &b:enemyBuildings) if(b.second.getDistance(p)<320) occupied=true;
+       auto failIt = failedExpansions.find({t.x, t.y});
+       if(failIt != failedExpansions.end() && frame < failIt->second) continue;
+       if(occupied) continue;
+@@ -351,7 +353,7 @@
+           trace<<"{\"event\":\"cannon_skip\",\"frame\":"<<frame<<",\"reason\":\"plan_failed\",\"until\":"<<cannonBlockedUntil<<"}\n";
+         }
+         if(!started && planned==Protoss_Nexus && buildTile.isValid()) {
+-          failedExpansions[{buildTile.x, buildTile.y}] = frame + 1200;
++          failedExpansions[{buildTile.x, buildTile.y}] = frame + 3600;
+         }
+         if(trace) trace<<"{\"event\":\"plan_end\",\"frame\":"<<frame<<",\"started\":"<<(started?"true":"false")<<"}\n";
+         planned=None;builder=nullptr;
+@@ -557,6 +559,9 @@
+     // Robo/Observatory past the DT timing. Hold their price while no enemy is at home.
+     bool techStep=desired==Protoss_Cybernetics_Core || desired==Protoss_Robotics_Facility || desired==Protoss_Observatory;
+     if(reserve==None && techStep && detectStep==None && !homeThreat) reserve=desired;
++    // Second Gateway: match-84 wanted it from 3240 but Zealots/Probes ate every mineral until 4632,
++    // so BananaBrain's 3-Zealot hit at 4680 met one Gateway. Hold its price like a tech step.
++    if(reserve==None && desired==Protoss_Gateway && count(Protoss_Gateway)<2) reserve=desired;
+     cash=me->minerals()-(reserve!=None?reserve.mineralPrice():0);
+     gas=me->gas()-(reserve!=None?reserve.gasPrice():0);
+     if(detectStep!=None && detectStep!=Protoss_Observer) {
+--- v7/build_config.json
++++ c21/build_config.json
+@@ -1,5 +1,5 @@
+ {
+-  "gate2_workers": 12,
++  "gate2_workers": 10,
+   "gates_base": 2,
+   "gates_bonus_workers": 18,
+   "gates_per_extra_base": 2,

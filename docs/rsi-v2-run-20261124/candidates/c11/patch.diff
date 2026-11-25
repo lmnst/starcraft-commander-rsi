@@ -1,0 +1,21 @@
+--- v6/MacroBot.cpp
++++ c11/MacroBot.cpp
+@@ -395,7 +395,8 @@
+       if(e->getID()==defenseRetryTarget && frame<defenseRetryUntil) continue;
+       if(t==Protoss_Photon_Cannon && e->isCompleted() && e->getHitPoints()+e->getShields()>80) continue;
+       if(t.isWorker() && !e->isAttacking()) continue;
+-      if(army.size()>=5 && !t.isBuilding()) continue;
++      // Probes join while the enemy outguns the home army (match-43@6600: 5 Zealots vs 6, Probes idle until 6840).
++      if(army.size()>=5 && !t.isBuilding() && threatPower<=homePower*1.1) continue;
+       if(t==Protoss_Pylon || t==Protoss_Photon_Cannon || t.canAttack()) {
+         double s=baseDistance(e->getPosition());
+         if(t==Protoss_Photon_Cannon && !e->isCompleted()) s-=300;
+@@ -441,7 +442,7 @@
+         // Do not immediately reacquire the same unreachable idle target.
+         defenseRetryTarget=current->getID(); defenseRetryUntil=frame+contactTimeout;
+       }
+-      else if(army.size()>=5 && !current->getType().isBuilding()) reason="army";
++      else if(army.size()>=5 && !current->getType().isBuilding() && threatPower<=homePower*1.1) reason="army";
+       if(reason) {releaseDefenders(reason);current=nullptr;}
+     }
+     Unit fresh=pickDefenseTarget();

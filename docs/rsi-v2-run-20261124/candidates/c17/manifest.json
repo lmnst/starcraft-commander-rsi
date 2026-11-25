@@ -1,0 +1,16 @@
+{
+  "candidate_id": "c17",
+  "parent": "v7",
+  "created_at": "2026-11-25T00:10:44.003362+00:00",
+  "changed_files": [
+    "MacroBot.cpp"
+  ],
+  "changed_functions": {},
+  "build_config_changes": null,
+  "cpp_changed_lines": 11,
+  "dll_sha256": "bfec57a6b79b81e993d2a343b2578a56c2942c42ef1e29fa2ad3880c5cb80733",
+  "macrobot_source_sha256": "818136e7a9543590197ad61caa5ed8e7d1a96ae1d983e64a47939e6281011738",
+  "diagnosis": "v7 lost to both Steamhammer and BananaBrain while sitting on unspent minerals, and the Gateways were idle. Two money-locking bugs cause this. (1) match-66 (Steamhammer), frames 6840 to 8160: Singularity Charge was not affordable, so production() reserved its 150 gas. Gas was stuck at 118, which pushed the local gas below 0. train() checks gas < gasPrice even for Zealots, and 0 < negative is false-negative, so Zealot training was blocked too. As a result 3 Gateways sat idle (order 23) with 400 to 770 minerals, the army stayed at 5 and then fell to 3, and the bot was overrun. (2) match-67 (BananaBrain), frames 11200 to 19000: nextBuilding() kept choosing Nexus sites that were Unbuildable_Location: (6,88), (85,96), (85,70) and (7,55). Each plan waited the full 600 frames with build_wait Unbuildable_Location, and Nexus reserve held 400 minerals the whole time. The bot stayed on 1 base with 3 idle Gateways and 430 to 550 minerals banked. The army peaked at 22 and was ground down by 38 enemy units. match-65 (PylonPuller, a win) also lost about 2000 frames to the same Unbuildable Nexus loop between 10080 and 11640.",
+  "hypothesis": "(a) train() only checks gas for units that actually cost gas. Zealots and Probes keep training while gas is reserved for Singularity Charge or tech. (b) When a Nexus build fails with Unbuildable_Location and the builder is within 256 px of the site, the plan is dropped at once and the site is blacklisted for 2400 frames. The 400-mineral reserve is released, and expansion() moves to the next valid base or the minerals go to Gateway units. 11 changed lines, no change in behavior otherwise.",
+  "expectation": "Steamhammer: 2 to 4 more Zealots between frames 6800 and 8200. The army should hold at 7 or more instead of collapsing to 3, and the game should survive past 14400 or be won. BananaBrain: the extra minerals go into units or a real natural instead of sitting in the bank. The army should be 25 or more by frame 14000, the score should go above 60, and the game may be won. PylonPuller: the natural comes about 1500 frames earlier, or more units are built, so the win should still hold. FPS should not change."
+}

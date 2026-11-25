@@ -1,0 +1,26 @@
+{
+  "candidate_id": "c23",
+  "parent": "v8",
+  "created_at": "2026-11-25T03:46:12.344634+00:00",
+  "changed_files": [
+    "MacroBot.cpp",
+    "build_config.json"
+  ],
+  "changed_functions": {},
+  "build_config_changes": {
+    "robo_army": [
+      8,
+      6
+    ],
+    "proactive_cannon_frame": [
+      -1,
+      5700
+    ]
+  },
+  "cpp_changed_lines": 13,
+  "dll_sha256": "654f379db6ace19d509f5f92f4836b8f78c88c32e866f0e805c5bb0075739c02",
+  "macrobot_source_sha256": "6d16fd1e652e46287c51acefa4d49c36e691ce4273d4e62d555947dbdbdf089e",
+  "diagnosis": "Against Steamhammer, both the Champion (match-92) and c22 (match-90) lost to Dark Templar while we had no detection. In match-92 the first DT was seen at 7688. The Forge was planned at 7896, but the first cannon was only started around 8880 and was killed at 9172. The Robo finished at 9499. The self-reported trace shows about 20 own_loss_undetected units (army and Probes), ending in a cutoff at 10920. c22 against PylonPuller (match-89) also fell to DTs: they were seen at 9240 and the first Observer finished around 11500. The only PylonPuller win (match-85) came because a Citadel was seen at 4920, which started the cannon and Observer path early. Steamhammer and BananaBrain never let us see a Citadel, so the reactive path fires too late.",
+  "hypothesis": "Build anti-DT detection at the mineral line before the DTs arrive, without waiting to see their tech. Set proactive_cannon_frame to 5700, gated by a new proCannon() check that waits while a scouted rush is live (fewer than 5 army units before frame 8000). Production holds back the Forge and Cannon price, as it already does for the 2nd Gateway and tech steps, so Zealot spending can't push the cannon past the DT timing. The Pylon that powers the cannon goes at the uncovered Nexus. robo_army drops from 8 to 6 so the Robo and Observer come sooner. Unlike c20, this adds the money reservation, starts at 5700 and moves the Robo earlier.",
+  "expectation": "Steamhammer: a cannon at the mineral line by about 7400 and an Observer by about 9000. Far fewer own_loss_undetected events, an army peak above 12, a score of at least 50, and possibly a win. PylonPuller: still a win with a score of at least 85, since the cannon comes before its DT at about 8700-9200. BananaBrain: the Zealot hit at about 4600 comes before the cannon path starts, so the score should stay near the Champion's 60. FPS unchanged."
+}

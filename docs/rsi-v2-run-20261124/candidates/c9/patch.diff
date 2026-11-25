@@ -1,0 +1,23 @@
+--- v5/MacroBot.cpp
++++ c9/MacroBot.cpp
+@@ -191,7 +191,8 @@
+       enemies.push_back(u);
+       if(u->getType().isBuilding()) enemyBuildings[u->getID()]=u->getPosition();
+       UnitType t=u->getType();
+-      if(t==Protoss_Dark_Templar || u->isCloaked() || u->isBurrowed()) {
++      // An enemy Observer is cloaked but harmless: it must not divert the build into the detection path.
++      if(t!=Protoss_Observer && (t==Protoss_Dark_Templar || u->isCloaked() || u->isBurrowed())) {
+         if(!cloakSeen) trace<<"{\"event\":\"cloak_seen\",\"frame\":"<<frame<<",\"flag\":\"cloak\",\"type\":\""<<t.getName()<<"\"}\n";
+         cloakSeen=true;
+       }
+@@ -303,6 +304,10 @@
+     if(count(Protoss_Assimilator)==0 && early(cfg.proactive_observer_frame)) return Protoss_Assimilator;
+     if(count(Protoss_Assimilator)==0 && !rushHold && (count(Protoss_Zealot)>=cfg.gas1_zealots || frame>cfg.gas1_frame || detection)) return Protoss_Assimilator;
+     if(count(Protoss_Assimilator)>0 && core==0 && !rushHold) return Protoss_Cybernetics_Core;
++    // DT insurance against Protoss: one Forge and one main-base cannon before the usual DT timing (~9500-10200).
++    bool dtInsurance=core>0 && frame>=6800 && Broodwar->enemy() && Broodwar->enemy()->getRace()==Races::Protoss;
++    if(dtInsurance && count(Protoss_Forge)==0) return Protoss_Forge;
++    if(dtInsurance && count(Protoss_Forge,true) && count(Protoss_Photon_Cannon)==0 && frame>=cannonBlockedUntil) return Protoss_Photon_Cannon;
+     if(core>0 && early(cfg.proactive_cannon_frame) && count(Protoss_Forge)==0) return Protoss_Forge;
+     if(core>0 && early(cfg.proactive_cannon_frame) && count(Protoss_Forge,true) && count(Protoss_Photon_Cannon)<int(nexuses.size())*cfg.cannons_per_base && frame>=cannonBlockedUntil) return Protoss_Photon_Cannon;
+     /*+*/if(core && early(cfg.proactive_observer_frame) && count(Protoss_Robotics_Facility)==0) return Protoss_Robotics_Facility;/*-*/

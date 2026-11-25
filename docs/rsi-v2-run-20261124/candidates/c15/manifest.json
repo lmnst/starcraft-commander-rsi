@@ -1,0 +1,16 @@
+{
+  "candidate_id": "c15",
+  "parent": "v6",
+  "created_at": "2026-11-24T22:55:45.632585+00:00",
+  "changed_files": [
+    "MacroBot.cpp"
+  ],
+  "changed_functions": {},
+  "build_config_changes": null,
+  "cpp_changed_lines": 11,
+  "dll_sha256": "f4c6a22049078de2ff74abc6377c701c5521ea0032a92d997650001e3753e1ff",
+  "macrobot_source_sha256": "62fcb32229283c30986bd18271e7762161cdaa3ec083f20e9ce6306b364b97ac",
+  "diagnosis": "Steamhammer has two openings. Against its Zealot rush (match-56), v6 sometimes holds. Against its Core/tech opening (match-58), our scout legally saw the enemy Cybernetics Core at 3480. The bot then made no detection, because the Robo only comes at robo_frame 7800 with army >= 8. The Robo was planned at 8064, and Dark Templar appeared at 8160. Between 8360 and 9400, undetected DTs killed every Dragoon and Zealot (\"own_loss_undetected\" rows), then the Probes, which ended in a cutoff loss. In match-52, PylonPuller's opening was only answered in time because its Citadel happened to be scouted at 5680.",
+  "hypothesis": "Scout-reactive detection: when an enemy Cybernetics Core (or a Dragoon before frame 7000) has been legally seen, no rush was seen, no early Zealot was seen and frame >= 4500, the bot follows the existing tested proactive-observer path. That path is Assimilator, then Robotics Facility right after the Core, then Observatory and Observer, with resources reserved. It is 11 changed lines that reuse the existing cfg.proactive_observer_frame branches through a new obsPrep() predicate. Openings that rush or show Zealots early (Steamhammer match-56, BananaBrain 59/60, PylonPuller 57) are untouched because earlyZealotSeen/rushSeen gate them out.",
+  "expectation": "Steamhammer on a Core/DT opening: the Robo starts at about 5000 and an Observer is out by about 7000, before the DTs at 8160. The army survives, and the score rises above 50 and could be a win instead of a 34 cutoff loss. Zealot-rush games against Steamhammer and BananaBrain should behave the same as v6. PylonPuller Core openings get an Observer earlier, similar to match-52, which was a win."
+}

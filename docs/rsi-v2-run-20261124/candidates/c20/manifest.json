@@ -1,0 +1,22 @@
+{
+  "candidate_id": "c20",
+  "parent": "v7",
+  "created_at": "2026-11-25T02:00:17.633234+00:00",
+  "changed_files": [
+    "MacroBot.cpp",
+    "build_config.json"
+  ],
+  "changed_functions": {},
+  "build_config_changes": {
+    "proactive_cannon_frame": [
+      -1,
+      6000
+    ]
+  },
+  "cpp_changed_lines": 10,
+  "dll_sha256": "c64caa78f7777b78baf53622a6bb78d7d0947325ee38b241905ddc7d48eeb040",
+  "macrobot_source_sha256": "dc19ae0b14d132dc85f1ac2ccabe09bf55e391d38543cda97089674c9acb4190",
+  "diagnosis": "Dark Templars, not the opening, decide our losses. In c19's PylonPuller loss (match-77), DTs showed up at 8576, before any detection existed. They killed all 9 army units by 9480 and then 22 Probes by 10200. The Robotics Facility only finished at 9593 and the Observatory at 10285, too late. In BananaBrain match-79 the DT was seen at 9320, our 23 workers fell to 0 by 10560, and the Nexus died around 11280. v7 beat PylonPuller in match-76 only because PylonPuller went Reaver that game instead of DTs. Champion v7 retest match-80 against Steamhammer also saw DTs and an Archon at 15480 to 16440. The bot's only answer to cloak is reactive (Forge, then cannon, then Robo after a sighting), and it arrives about 1500 frames too late. detectionPoint() already sends units to a powered cannon when an undetected attacker is near, but no cannon exists at the time it is needed.",
+  "hypothesis": "Turn on the tested proactive_cannon path (build_config proactive_cannon_frame -1 to 6000) so that a Forge, a powered Pylon and one Photon Cannon per Nexus are up at the mineral line by about 7500. That is before the earliest DT arrival we have seen (8576). Three C++ fixes (10 changed lines) make the path safe. (1) A new proCannon() gate delays it while a scouted rush is still live (rushSeen with army < 5 and frame < 7000), so Steamhammer and BananaBrain Zealot pressure keeps its Gateway priority. (2) The proactive path now also places the Pylon at bareNexus() first, as the cloak path does, so the cannon is powered and covers the Probes. (3) Build placement anchors that Pylon at the uncovered Nexus. The cannon detects DTs in the mineral line, so workers survive. The existing detectionPoint() retreat then pulls the army back to the cannon, where it can fight the DTs it can now see. The Forge also makes Ground Weapons available earlier.",
+  "expectation": "PylonPuller: a cannon exists at the main by about 7500. When DTs arrive (about 8600), workers stay at 18 or more instead of dropping to 0, and the army survives by falling back to the cannon. Expect a win or a survival-length game with a score of 70 or more. BananaBrain: the DT at about 9320 no longer wipes out the Probes, so the bot survives past 14400 with workers above 10, scoring 50 or more. Steamhammer: the opening is unchanged under rushSeen until army 5 or frame 7000, and the later DT/Archon timing at about 15400 is covered, so the score should be at least the ~58 baseline. FPS stays the same, since only constant-time checks were added."
+}

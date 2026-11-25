@@ -1,0 +1,26 @@
+{
+  "candidate_id": "c5",
+  "parent": "v3",
+  "created_at": "2026-11-24T17:32:17.144509+00:00",
+  "changed_files": [
+    "MacroBot.cpp",
+    "build_config.json"
+  ],
+  "changed_functions": {},
+  "build_config_changes": {
+    "robo_frame": [
+      9000,
+      8000
+    ],
+    "proactive_cannon_frame": [
+      -1,
+      7000
+    ]
+  },
+  "cpp_changed_lines": 7,
+  "dll_sha256": "a1790cdbc1aaa3cd8acf1dd95b7776604e07347e1254e9bbe883c0c4983b0772",
+  "macrobot_source_sha256": "22adf04b1cf7feb631478c1c6fa552fb7df0832073d16fb6e0e5a3f609b0e0c0",
+  "diagnosis": "Both remaining losses happen after the army is lost, around frames 9500 to 11500. Steamhammer (match 18) sends Dark Templar at frame 9456 and a Shuttle drop at 10200. Our first Forge was only ordered at 9528 after the DTs were seen, and no cannon was ever finished. Robo and Observatory came too late, so workers fell from 23 to 1 by frame 10800. BananaBrain (match 19) and Steamhammer (match 20) push with 13 to 20 Dragoons. Our 10 to 12 units trade badly (exchange about 0.25 to 0.3). workerDefense then sends groups of 4 Probes at the Dragoons over and over (defenders_ever reached 21 in match 19), and the economy dies from 25 workers to 0.",
+  "hypothesis": "Three changes. (1) build_config: proactive_cannon_frame changes from -1 to 7000, so a Forge and one cannon per Nexus go up near the mineral lines before the DT timing at about 9500. robo_frame changes from 9000 to 8000, so the Observer comes earlier. (2) Focus fire in combat(): units prefer targets already in weapon range, and among those the most damaged. This should raise exchange ratio. (3) workerDefense no longer pulls Probes against non-building targets when visible enemy ground power at our bases is over 8, which means a real army and not a small raid. Workers in a fight like that now stop with the reason \"overwhelmed\" and go back to mining.",
+  "expectation": "Steamhammer: a cannon at the main mineral line by frame of about 8500 detects and shoots the DTs, so workers stay above 15 at frame 11000 instead of 1. The score should rise above 53, with a possible win. BananaBrain and Steamhammer Dragoon pushes: no mass Probe pulls, so workers stay alive longer and exchange improves through focus fire. Score should be at least 45. PylonPuller has a cannon at home, which costs a little early pace, but it is still a win (its DTs come at 14760, and the cannon helps there too)."
+}

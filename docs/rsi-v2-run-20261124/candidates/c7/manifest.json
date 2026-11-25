@@ -1,0 +1,16 @@
+{
+  "candidate_id": "c7",
+  "parent": "v4",
+  "created_at": "2026-11-24T18:28:37.562116+00:00",
+  "changed_files": [
+    "MacroBot.cpp"
+  ],
+  "changed_functions": {},
+  "build_config_changes": null,
+  "cpp_changed_lines": 15,
+  "dll_sha256": "afabecfffbf59de1f8e9ad260367595c0b5e956b8205aea8bb117649d2ba2b45",
+  "macrobot_source_sha256": "219fd2ed513642c368b1fc60c818f82f0f120bd117b8960a9c6de9b2e4b1de50",
+  "diagnosis": "v4 (c6) now detects BananaBrain's zealot rush from the scout at frame 3272 (match-27). Even so, it had only 4 Zealots against 5 to 9 enemy Zealots and lost all its Probes by frame 6720. The rush response still spends minerals on things other than Zealots before the rush lands: the Assimilator (75), the Core at about 5100 (150), the third Gateway at 4128 when only 16 Probes can't feed 3 Gateways, plus Probes mining gas. Gas sat banked at 120 and unused all game. Our Zealots also fought out at the ramp, 420 px from home (match-27@5760), and died piecemeal. Only after that did the enemy reach the mineral line. PylonPuller (match-25 and match-28) and Steamhammer (match-26) never set rushSeen, so changes gated on rushSeen leave them alone.",
+  "hypothesis": "Once a rush has been scouted, before frame 6500 and with no cloak seen, spend nothing on tech until 4 army units exist. That means no Assimilator, no Core, and 0 gas Probes until the Core exists. The third Gateway is only built when minerals are at least 200. That turns about 225 or more minerals into one or two extra Zealots before frame 5600. In combat, when there is a home threat, our army is under 8, and threatPower is more than 1.2 times homePower, units don't chase targets more than 260 px from our bases. They regroup 96 px from home, so Zealots fight next to the Probes and the defending workers instead of alone at the ramp.",
+  "expectation": "BananaBrain rush games: 5 to 6 Zealots at about 5600 instead of 4, the fight happens at our mineral line, and the game lasts past 9000 with a score above 30 (v4 got 15.7). Non-rush games behave exactly like v4, so the Steamhammer win (93) is kept and PylonPuller scores about 45 to 58. The combat clause only fires when we are outnumbered at home."
+}

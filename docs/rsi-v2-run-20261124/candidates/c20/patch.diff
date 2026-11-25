@@ -1,0 +1,43 @@
+--- v7/MacroBot.cpp
++++ c20/MacroBot.cpp
+@@ -100,6 +100,8 @@
+   } cfg;
+   bool configOk=false;
+   bool early(int at) const {return at>=0 && frame>=at;}
++  // Proactive cannon waits while a scouted rush still outnumbers a tiny army.
++  bool proCannon() const {return early(cfg.proactive_cannon_frame) && (!rushSeen || army.size()>=5 || frame>=7000);}
+   bool loadConfig(std::string& error) {
+     std::ifstream in("bwapi-data/AI/build_config.json",std::ios::binary);
+     if(!in) {error="missing bwapi-data/AI/build_config.json";return false;}
+@@ -322,8 +324,10 @@
+     if(count(Protoss_Assimilator)==0 && early(cfg.proactive_observer_frame)) return Protoss_Assimilator;
+     if(count(Protoss_Assimilator)==0 && !rushHold && (count(Protoss_Zealot)>=cfg.gas1_zealots || frame>cfg.gas1_frame || detection)) return Protoss_Assimilator;
+     if(count(Protoss_Assimilator)>0 && core==0 && !rushHold) return Protoss_Cybernetics_Core;
+-    if(core>0 && early(cfg.proactive_cannon_frame) && count(Protoss_Forge)==0) return Protoss_Forge;
+-    if(core>0 && early(cfg.proactive_cannon_frame) && count(Protoss_Forge,true) && count(Protoss_Photon_Cannon)<int(nexuses.size())*cfg.cannons_per_base && frame>=cannonBlockedUntil) return Protoss_Photon_Cannon;
++    // DT insurance (match-77@8576, match-79@9320: DTs erased army and Probes before the Robo path could answer).
++    if(core>0 && proCannon() && count(Protoss_Forge)==0) return Protoss_Forge;
++    if(core>0 && proCannon() && count(Protoss_Forge,true) && count(Protoss_Photon_Cannon)<int(nexuses.size())*cfg.cannons_per_base && frame>=cannonBlockedUntil && bareNexus()) return Protoss_Pylon;
++    if(core>0 && proCannon() && count(Protoss_Forge,true) && count(Protoss_Photon_Cannon)<int(nexuses.size())*cfg.cannons_per_base && frame>=cannonBlockedUntil) return Protoss_Photon_Cannon;
+     /*+*/if(core && early(cfg.proactive_observer_frame) && count(Protoss_Robotics_Facility)==0) return Protoss_Robotics_Facility;/*-*/
+     if(core && detection && count(Protoss_Robotics_Facility)==0) return Protoss_Robotics_Facility;
+     if(count(Protoss_Robotics_Facility,true) && count(Protoss_Observatory)==0) return Protoss_Observatory;
+@@ -370,7 +374,7 @@
+         }
+       } else {
+         if(type==Protoss_Pylon) for(auto u:own) if(u->getType().requiresPsi() && u->isCompleted() && !u->isPowered()) {anchor=u->getPosition();break;}
+-        if(type==Protoss_Pylon && (cloakSeen || cloakTechSeen) && count(Protoss_Forge,true)) {Unit b=bareNexus(); if(b) anchor=b->getPosition();}
++        if(type==Protoss_Pylon && (cloakSeen || cloakTechSeen || proCannon()) && count(Protoss_Forge,true)) {Unit b=bareNexus(); if(b) anchor=b->getPosition();}
+         if(type==Protoss_Photon_Cannon) {
+           anchor=home;
+           for(auto n:nexuses) {bool covered=false;for(auto u:own) if(u->getType()==Protoss_Photon_Cannon && u->getDistance(n)<300) covered=true;
+--- v7/build_config.json
++++ c20/build_config.json
+@@ -34,6 +34,6 @@
+   "citadel_zealots": 8,
+   "citadel_frame": 9500,
+   "proactive_observer_frame": -1,
+-  "proactive_cannon_frame": -1,
++  "proactive_cannon_frame": 6000,
+   "cannons_per_base": 1
+ }

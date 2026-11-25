@@ -1,0 +1,22 @@
+{
+  "candidate_id": "c3",
+  "parent": "v2",
+  "created_at": "2026-11-24T16:17:58.790852+00:00",
+  "changed_files": [
+    "MacroBot.cpp",
+    "build_config.json"
+  ],
+  "changed_functions": {},
+  "build_config_changes": {
+    "proactive_observer_frame": [
+      -1,
+      6000
+    ]
+  },
+  "cpp_changed_lines": 18,
+  "dll_sha256": "829ca6f38c67a103d2970885113c1c30036075e50a57cce7c07038d80ccb82c6",
+  "macrobot_source_sha256": "a1bf4edcb4735e9c760fd1a55639915e104733a3a456e97419f89cdd7716409b",
+  "diagnosis": "Our only win is against PylonPuller, and it is fragile. In c2's match against PylonPuller, Dark Templar showed up at frame 8488 and there was no detection until about frame 10750. They killed the whole army and every Probe (match-9 frames 8775 to 10703, own_loss_undetected events). The Champion only survived that matchup because it happened to see a Citadel at frame 5672.\n\nAgainst Steamhammer and BananaBrain, every loss follows the same pattern. At frames 8.5k to 9.5k the army (8 to 13 units) attacks the enemy natural. The attack check (power 1.4x) counts only mobile units, so the 2 Photon Cannons at the enemy natural are ignored: in match-12 at frame 8552 the bot judged 20 vs 4. The bot trades badly and loses units, and the enemy counterattacks a smaller army. In match-6 and match-12 the bot takes its own natural at frame ~11k while its army sits at the main rally. The army either fights far forward or idles at the main, and it never covers the new Nexus.",
+  "hypothesis": "Three changes. (1) Remembered enemy static defense now counts toward the enemy power used in the attack and retreat checks: Cannon and Sunken 4, Bunker 5. It is counted for as long as the building is remembered as standing, so the bot will not attack into cannons with a small force. (2) Once a second Nexus is complete, the army's idle hold point is set 192 px in front of the Nexus nearest the enemy instead of the main rally, so the natural is defended. (3) proactive_observer_frame is set to 6000, so the robo/observer detection path starts at frame 6000 without needing to see cloak. This guards the PylonPuller win against Dark Templar timings it did not scout.",
+  "expectation": "PylonPuller: an Observer exists before frame ~8500, so Dark Templar do not wipe the army, and the bot keeps winning. Steamhammer and BananaBrain: no attack_start into cannons at frames 8.5k to 9.5k. The army grows past 15 before the first attack, the exchange ratio rises above 0.46, and the natural survives longer because the army holds there. That should mean a higher score and a chance at a win."
+}

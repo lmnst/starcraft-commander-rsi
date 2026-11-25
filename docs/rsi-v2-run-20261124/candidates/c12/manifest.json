@@ -1,0 +1,16 @@
+{
+  "candidate_id": "c12",
+  "parent": "v6",
+  "created_at": "2026-11-24T21:13:16.958960+00:00",
+  "changed_files": [
+    "MacroBot.cpp"
+  ],
+  "changed_functions": {},
+  "build_config_changes": null,
+  "cpp_changed_lines": 9,
+  "dll_sha256": "a05144613a3d3e88c3e1bbfb512b928d7840dafb92d6108229bb62eae8c77e45",
+  "macrobot_source_sha256": "df9ac368a43b1843fe4c0d6cd3852984dc1a08722880632522898b952106f5e6",
+  "diagnosis": "c11 kept 4 Probes in the fight while the enemy outguns the home army. On BananaBrain the champion scored 9.45 at match-48@7920 and c11 scored 51.99; on PylonPuller c11 won (82.37). c11 lost Steamhammer through a separate problem. In match-46 the bot started the natural Nexus at 8640\u20138976, just as the attack stopped with mine 21.2 vs theirs 24. Spending 400 minerals there left the bot with 7 minerals at 9120. About 10 enemy Dragoons then attacked the half-built natural at 10272\u201310920 and broke our 12-unit army: 12 units fell to 4. The won champion match-42 had built its Nexus while our army was ahead. BananaBrain match-47 shows the same pattern: the Nexus was planned at 8592, the attack stopped at 9304 (20 vs 27), and the army collapsed at 11760.",
+  "hypothesis": "This keeps c11's worker-defense change: Probes stay engaged with army >= 5 when threatPower > homePower*1.1. It adds a gate on the natural Nexus. The Nexus is only taken when our army power is at least 1.1x the remembered enemy army power, or the army has 14 or more units, or the frame is past 13000. When the enemy army is larger, those 400 minerals go to Gateway units and the bot fights near the main ramp, not at an undefended natural.",
+  "expectation": "Steamhammer: the bot no longer starts the Nexus at about 8640 while behind 21 vs 24. It holds about 10 Dragoon/Zealot units plus about 3 more at the main through the 10400 Dragoon push and expands later; the aim is to recover the win, or at least score above 70. BananaBrain keeps c11's early survival (at least 50) and may last past 12000. PylonPuller keeps its win, because there our army was ahead (21 vs 2) when it expanded."
+}

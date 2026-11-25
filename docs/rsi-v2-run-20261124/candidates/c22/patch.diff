@@ -1,0 +1,38 @@
+--- v8/MacroBot.cpp
++++ c22/MacroBot.cpp
+@@ -63,6 +63,7 @@
+   int enemySnapshotFrame = -1;
+   // Remembered enemy combat units (legal sightings only): id -> (type, last seen frame).
+   std::map<int, std::pair<UnitType,int>> enemyArmyMemory;
++  std::map<int,int> enemyStaticMemory;
+   // Cloaked/burrowed ground attackers (legal sightings only): id -> (last position, frame). Observers hunt these.
+   std::map<int, std::pair<Position,int>> cloakMemory;
+   // First Nexus lacking both a Photon Cannon and a Pylon nearby (cannon there needs power first).
+@@ -218,6 +219,7 @@
+       if((u->isCloaked() || u->isBurrowed() || t==Protoss_Dark_Templar) && !u->isFlying() && t.canAttack())
+         cloakMemory[u->getID()]={u->getPosition(),frame};
+       if(u->isCompleted() && typeValue(t)>0) enemyArmyMemory[u->getID()]={t,frame};
++      if(u->isCompleted() && (t==Protoss_Photon_Cannon || t==Terran_Bunker || t==Zerg_Sunken_Colony)) enemyStaticMemory[u->getID()]=frame;
+       if(t==Protoss_Gateway || t==Terran_Barracks) enemyGateIds.insert(u->getID());
+       if(t==Protoss_Assimilator || t==Protoss_Cybernetics_Core || t==Protoss_Forge || t==Terran_Refinery || t==Zerg_Extractor) enemyTechSeen=true;
+       if(t==Protoss_Zealot && frame<3800) earlyZealotSeen=true;
+@@ -652,6 +654,11 @@
+     // fall back to the rally when the edge is gone instead of trickling units away.
+     double mine=0; for(auto u:army) mine+=power(u);
+     double theirs=rememberedEnemyPower();
++    // Unscouted armies are not empty (match-87@8168 attacked "theirs=0" into 8 Dragoons+Reaver);
++    // remembered static defense counts too (match-86@9480 walked into 3 Cannons).
++    theirs=std::max(theirs,std::min(enemyEstimate(),14.0));
++    int cannons=0; for(const auto &c:enemyStaticMemory) if(frame-c.second<3600) ++cannons;
++    theirs+=3.0*std::min(cannons,4);
+     bool maxed=me->supplyUsed()>=340 || army.size()>=30;
+     if(!attacking && ((army.size()>=8 && mine>=theirs*1.4+4) || maxed)) {
+       attacking=true;
+@@ -779,6 +786,7 @@
+     ownPositions.erase(u->getID());
+     enemyBuildings.erase(u->getID());
+     enemyArmyMemory.erase(u->getID());
++    enemyStaticMemory.erase(u->getID());
+     cloakMemory.erase(u->getID());
+     if(u->getType().isMineralField()) BWEM::Map::Instance().OnMineralDestroyed(u);
+     else if(u->getPlayer()==Broodwar->neutral() && u->getType().isBuilding()) BWEM::Map::Instance().OnStaticBuildingDestroyed(u);

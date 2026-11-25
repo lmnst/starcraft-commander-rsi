@@ -1,0 +1,48 @@
+--- v7/MacroBot.cpp
++++ c19/MacroBot.cpp
+@@ -530,7 +530,9 @@
+     }
+   }
+   bool train(Unit u,UnitType type) {
+-    if(cash<type.mineralPrice() || gas<type.gasPrice() || !u->canTrain(type)) return false;
++    // Gas is only checked for units that cost gas: a negative gas budget after a reservation must not idle
++    // Gateways on Zealots (match-72@6480-7680: three idle Gateways, 741 minerals banked, army frozen at 5).
++    if(cash<type.mineralPrice() || (type.gasPrice()>0 && gas<type.gasPrice()) || !u->canTrain(type)) return false;
+     if(u->train(type)){cash-=type.mineralPrice();gas-=type.gasPrice();return true;} return false;
+   }
+   bool upgrade(Unit u,UpgradeType type) {
+@@ -574,7 +576,10 @@
+       train(u,goon?Protoss_Dragoon:Protoss_Zealot);
+     }
+     if(!holdProbes) for(auto n:nexuses) if(n->isIdle() && queued(Protoss_Probe)<workerGoal) train(n,Protoss_Probe);
+-    bool rangeNeeded=detectStep==None && count(Protoss_Dragoon)>=cfg.range_after_dragoons && !me->getUpgradeLevel(UpgradeTypes::Singularity_Charge) && !me->isUpgrading(UpgradeTypes::Singularity_Charge);
++    // Under a scouted rush the gas bank is capped near 100, so a 150-gas Singularity Charge reservation could never
++    // be paid and only froze 150 minerals and all Dragoon gas (match-72: gas 118 from 5040 to 7920). Wait for 6 units.
++    bool rushEconomy=rushSeen && frame<8000 && army.size()<6;
++    bool rangeNeeded=!rushEconomy && detectStep==None && count(Protoss_Dragoon)>=cfg.range_after_dragoons && !me->getUpgradeLevel(UpgradeTypes::Singularity_Charge) && !me->isUpgrading(UpgradeTypes::Singularity_Charge);
+     if(rangeNeeded) {
+       bool began=false;
+       for(auto u:own) if(u->getType()==Protoss_Cybernetics_Core && u->isCompleted() && u->isPowered()) {
+@@ -680,6 +685,11 @@
+         Position safe=detectionPoint(u);
+         if(safe!=Positions::None) {moveToDetection(u,safe);continue;}
+       }
++      // Leash outside an attack: do not chase a retreating unit across the map (match-66@6000-8160: three units
++      // chased one Zealot into the enemy main and died there; match-72@4800-5760 two Zealots did the same).
++      if(target && !attacking && !homeThreat && baseDistance(u->getPosition())>900 && baseDistance(target->getPosition())>800) {
++        move(u,rally);continue;
++      }
+       // Preserve reinforcements instead of feeding isolated units into a larger force.
+       if(target && foe>friendPower*1.25 && baseDistance(u->getPosition())>430) {
+         Position retreat=toward(center,home,180);
+@@ -693,7 +703,9 @@
+         move(u,toward(u->getPosition(),target->getPosition(),-80));continue;
+       }
+       // Outnumbered at home: fight beside the Nexus and Probes, not piecemeal out at the ramp.
+-      if(target && homeThreat && army.size()<8 && threatPower>homePower*1.2 && baseDistance(target->getPosition())>260 && baseDistance(u->getPosition())>200) {
++      // Probes already fight anything inside defenseRadius, so Zealots stand with them there instead of backing to
++      // the Nexus while 4 Probes die alone (match-75@6000-6360: 16 -> 7 workers vs 4 Zealots).
++      if(target && homeThreat && army.size()<8 && threatPower>homePower*1.2 && baseDistance(target->getPosition())>defenseRadius && baseDistance(u->getPosition())>200) {
+         move(u,toward(home,u->getPosition(),96));continue;
+       }
+       if(target) hit(u,target);

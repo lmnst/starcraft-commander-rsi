@@ -1,0 +1,42 @@
+--- v4/MacroBot.cpp
++++ c7/MacroBot.cpp
+@@ -293,13 +293,16 @@
+     if(gates<2 && workers.size()>=cfg.gate2_workers) return Protoss_Gateway;
+     // Early zealot/ling/marine pressure seen: a third Gateway before tech, no greedy Nexus.
+     if(rushSeen && gates<2) return Protoss_Gateway;
+-    if(rushSeen && gates<3 && frame<9000 && workers.size()>=12) return Protoss_Gateway;
++    // Third Gateway only from floating minerals: with ~16 Probes two Gateways already use the income.
++    if(rushSeen && gates<3 && frame<9000 && workers.size()>=12 && me->minerals()>=200) return Protoss_Gateway;
+     bool detection=cloakSeen || cloakTechSeen;
++    // Scouted rush: Assimilator and Core wait for the first Zealots (or frame 6500); minerals buy Zealots.
++    bool rushHold=rushSeen && !detection && frame<6500 && army.size()<4;
+     if(detection && count(Protoss_Forge)==0) return Protoss_Forge;
+     if(detection && count(Protoss_Forge,true) && count(Protoss_Photon_Cannon)<int(nexuses.size())*cfg.cannons_per_base && frame>=cannonBlockedUntil) return Protoss_Photon_Cannon;
+     if(count(Protoss_Assimilator)==0 && early(cfg.proactive_observer_frame)) return Protoss_Assimilator;
+-    if(count(Protoss_Assimilator)==0 && (count(Protoss_Zealot)>=cfg.gas1_zealots || frame>cfg.gas1_frame || detection)) return Protoss_Assimilator;
+-    if(count(Protoss_Assimilator)>0 && core==0) return Protoss_Cybernetics_Core;
++    if(count(Protoss_Assimilator)==0 && !rushHold && (count(Protoss_Zealot)>=cfg.gas1_zealots || frame>cfg.gas1_frame || detection)) return Protoss_Assimilator;
++    if(count(Protoss_Assimilator)>0 && core==0 && !rushHold) return Protoss_Cybernetics_Core;
+     if(core>0 && early(cfg.proactive_cannon_frame) && count(Protoss_Forge)==0) return Protoss_Forge;
+     if(core>0 && early(cfg.proactive_cannon_frame) && count(Protoss_Forge,true) && count(Protoss_Photon_Cannon)<int(nexuses.size())*cfg.cannons_per_base && frame>=cannonBlockedUntil) return Protoss_Photon_Cannon;
+     /*+*/if(core && early(cfg.proactive_observer_frame) && count(Protoss_Robotics_Facility)==0) return Protoss_Robotics_Facility;/*-*/
+@@ -484,7 +487,7 @@
+     for(auto w:workers) if(w->getOrderTarget()) assigned[w->getOrderTarget()->getID()]++;
+     int gasTarget=me->gas()<cfg.gas_bank_full?cfg.gas_workers_full:(me->gas()<cfg.gas_bank_reduced?cfg.gas_workers_reduced:0);
+     // Against an early zealot/ling/marine rush, minerals buy the defending warriors; bank only a little gas.
+-    if(rushSeen && frame<8000 && army.size()<6 && me->gas()>=100) gasTarget=0;
++    if(rushSeen && frame<8000 && army.size()<6 && (me->gas()>=100 || count(Protoss_Cybernetics_Core)==0)) gasTarget=0;
+     for(auto w:workers) {
+       if(w==builder || w==scout || defenders.count(w->getID()) || w->isConstructing()) continue;
+       if(!commandReady(w,24)) continue;
+@@ -663,6 +666,10 @@
+       if(target && u->getType()==Protoss_Dragoon && u->getGroundWeaponCooldown()>6 && !target->isFlying() && u->getDistance(target)<(me->getUpgradeLevel(UpgradeTypes::Singularity_Charge)?170:105)) {
+         move(u,toward(u->getPosition(),target->getPosition(),-80));continue;
+       }
++      // Outnumbered at home: fight beside the Nexus and Probes, not piecemeal out at the ramp.
++      if(target && homeThreat && army.size()<8 && threatPower>homePower*1.2 && baseDistance(target->getPosition())>260 && baseDistance(u->getPosition())>200) {
++        move(u,toward(home,u->getPosition(),96));continue;
++      }
+       if(target) hit(u,target);
+       else if(undetectedThreat) {
+         // Do not chase an untargetable attacker while waiting for detection.

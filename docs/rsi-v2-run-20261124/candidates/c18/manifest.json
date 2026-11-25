@@ -1,0 +1,16 @@
+{
+  "candidate_id": "c18",
+  "parent": "v7",
+  "created_at": "2026-11-25T00:53:25.590971+00:00",
+  "changed_files": [
+    "MacroBot.cpp"
+  ],
+  "changed_functions": {},
+  "build_config_changes": null,
+  "cpp_changed_lines": 15,
+  "dll_sha256": "6b21f458c93a5bf2386a6441ea522b36a097a813958c09a1309779ca83d842e7",
+  "macrobot_source_sha256": "6f15c8cedeb0d7e1c2867c922e6445d3781eafbfc19fc75dd227598719daf95e",
+  "diagnosis": "PylonPuller does not always open the same way. In match-65 (v7 win) we saw its Citadel at 6584. That set cloakTechSeen, so we built Forge, cannon, Robo and an Observer at 9893, and held against DTs that arrived at 9240. In match-69 (c17 loss) the scout only saw a Forge and 4 cannons at 3360, with no Gateway and no Core. No cloak flag was set, so the Robo came by timer at 8808. DTs reached our attacking army at 10320 with no detection. 15 or more units died to one or two DTs (own_loss_undetected 10934 to 12200), and we lost to a zero-unit stalemate. On BananaBrain in match-72 (v7), rushSeen capped gas at 100, so gas sat at 118 from 5000 to 8000. Singularity Charge never started, and enemy Dragoons beat 3 to 5 Zealots. On Steamhammer, c17's train() gas fix gave the best result so far: inconclusive at frame 36000, score 89.6, peak army 52.",
+  "hypothesis": "(1) A scouted cannon opening with no Gateway seen, checked between frames 4800 and 7000, sets cloakTechSeen. This reuses the exact Citadel-sighting response that won match-65: Forge, then a cannon, then Robo and Observatory, then Observers. Steamhammer and BananaBrain never trigger it because their Gateways are seen at around 3360 to 3720. (2) Under rushSeen, once the Core is complete the gas cap rises from 100 to 150, so Singularity Charge can start against Dragoon follow-ups. (3) Keep c17's train() fix: gas is only checked for units that cost gas, so a gas reservation no longer blocks Zealots. c17's Nexus blacklist is dropped. 15 changed lines.",
+  "expectation": "PylonPuller: a Forge and cannon by about 7500 and an Observer by about 10000 in a cannon-opening game. Observers should go with the army against DTs at around 10300, the win should hold, and the score should be above 85. Steamhammer: like c17, survive past 14400 with an army of 15 or more, and possibly win. BananaBrain: Singularity Charge starts before about 6500, and Dragoons fight enemy Dragoons. The army should be 8 or more at 8400 instead of 3, and the score should be 45 or higher. FPS should not change."
+}

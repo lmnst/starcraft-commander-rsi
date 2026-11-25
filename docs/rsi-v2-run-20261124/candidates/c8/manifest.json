@@ -1,0 +1,16 @@
+{
+  "candidate_id": "c8",
+  "parent": "v5",
+  "created_at": "2026-11-24T19:02:38.457403+00:00",
+  "changed_files": [
+    "MacroBot.cpp"
+  ],
+  "changed_functions": {},
+  "build_config_changes": null,
+  "cpp_changed_lines": 14,
+  "dll_sha256": "c8abad7cf9e41a13e9d1d4309a486f377781cc88daf762b6109010fdf0f7da51",
+  "macrobot_source_sha256": "702aedb7d9e5729ccd7102c78be10416879888fe05f6673dd3a1571b4e7486cc",
+  "diagnosis": "v5 now holds BananaBrain's zealot rush. In match 31 there were 10 Zealots by about 7440, the army peaked at 13, and lock_frac was 0. We still lost, and the cause was Dark Templar. Two DTs were first seen at frame 8424. We had no Forge, no cannon and no Robotics Facility, and the bot planned a Nexus at 8376. The Forge only started at about 9300 and the Robotics Facility could not be afforded. Between 9495 and 10127, 20 or more Probes died to the undetected DTs, leaving 0 workers by 10200. The army of 12 sat at home with nothing it could hit. PylonPuller (match 29) and Steamhammer (match 30) never set rushSeen, so they followed a different path.",
+  "hypothesis": "BananaBrain follows its zealot opener with DTs. Add dtGuard(): it is true when rushSeen is set, the enemy has been seen to be Protoss, and the frame is 5400 or later. It reuses the existing proactive-cannon branch in nextBuilding: once the Core is placed, build a Forge and then one Photon Cannon at the Nexus. That is about 300 minerals, and the cannon should finish around 7700, before the DTs arrive at about 8400. Also, once cloak has been seen and we have no finished cannon or Observer, the second-Nexus expansion is blocked so minerals go to detection. The existing retreat-to-detection micro then pulls units to the cannon, so the army can fight DTs next to the mineral line.",
+  "expectation": "In BananaBrain games, a Forge goes up at about 6200 and a cannon is done by about 7800. The DTs at about 8500 get detected at the main and killed or held, and we keep about 20 Probes instead of 0. The game should go past 15000 with a score above 55, and a win is possible. PylonPuller and Steamhammer games behave the same as v5, because rushSeen was never set there."
+}

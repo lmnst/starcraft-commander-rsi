@@ -1,0 +1,16 @@
+{
+  "candidate_id": "c22",
+  "parent": "v8",
+  "created_at": "2026-11-25T03:19:30.914089+00:00",
+  "changed_files": [
+    "MacroBot.cpp"
+  ],
+  "changed_functions": {},
+  "build_config_changes": null,
+  "cpp_changed_lines": 8,
+  "dll_sha256": "2bbce2d1bcd43eacf3b2a8813aafbe88cf8d7f0d5c4dd152097aebbfd5628fc3",
+  "macrobot_source_sha256": "b9981344326322e77d080cd23aac20d395cad07d4aea96f6e1431ad54b948353",
+  "diagnosis": "v8 loses Steamhammer and BananaBrain because its attack trigger misjudges enemy strength. combat() starts an attack when mine >= theirs*1.4+4, and theirs counts only remembered mobile units. In match-87@8168 the bot attacked with theirs=0 because it had never seen BananaBrain's army. Its 12 units ran into 8 Dragoons plus a Reaver at the enemy main around 9960 and were destroyed piecemeal by 11400. The counterattack then killed the bot by 17000. In match-86@8456 it attacked Steamhammer with theirs=7 and repeatedly walked into a wall of 3 Photon Cannons at (2048\u20132176, 608\u2013640) at 9480, 12360 and 15720. Each time the army bled down (12\u21927, 13\u21928, 18\u21924) instead of growing.",
+  "hypothesis": "The attack trigger needs a realistic estimate of the enemy. theirs is now the larger of remembered army power and min(enemyEstimate(), 14), where enemyEstimate() is a time-based floor. Remembered enemy static defense (Cannon, Bunker or Sunken legally seen within 3600 frames) adds 3 power each, up to 4. This is 8 C++ lines in combat(), refresh() and onUnitDestroy(), with no change to the build. The army waits at the rally and grows (Robo, Reavers and Gateways keep producing) instead of suiciding into an unscouted army or a cannon wall. It attacks later with a decisive force, or the maxed / 30-unit trigger fires. This differs from c14, which also changed the attack gate but added a leash on chasing that hurt Steamhammer; here there is no leash and the floor is capped at 14.",
+  "expectation": "BananaBrain: no attack_start before about frame 10000. The army stays home and holds about 14 or more units when BananaBrain pushes around 14000, aiming to survive past 18000 or win the defense, with a score of at least 60. Steamhammer: fewer cannon-wall suicides, the army peak rises above 19, and the score is at least 55. PylonPuller: the first attack moves from 9664 to about 10500 (theirs rises from about 2 to about 14, and 16.5 >= 14*1.4+4 is false until the army is bigger). The bot should still win, with a score of at least 80. FPS unchanged."
+}

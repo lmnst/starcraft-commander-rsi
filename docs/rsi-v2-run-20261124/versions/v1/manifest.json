@@ -1,0 +1,9 @@
+{
+  "version": "v1",
+  "parent": null,
+  "created_after_match": 0,
+  "summary": "v2 seed (fixed proactive cannon priority + expansion cooldown)",
+  "dll_sha256": "82bcf29a6df9c060fc191c3bb00cd6f8e03e022bb33df92edaac00138f6ca940",
+  "macrobot_source_sha256": "670bb86d4bacd99c3615f5409574b7ff01c60cf980fc1dc3909df67c100b7f34",
+  "compile_seconds": 7.125
+}

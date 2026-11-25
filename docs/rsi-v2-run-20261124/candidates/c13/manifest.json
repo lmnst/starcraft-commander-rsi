@@ -1,0 +1,22 @@
+{
+  "candidate_id": "c13",
+  "parent": "v6",
+  "created_at": "2026-11-24T21:52:32.308328+00:00",
+  "changed_files": [
+    "MacroBot.cpp",
+    "build_config.json"
+  ],
+  "changed_functions": {},
+  "build_config_changes": {
+    "proactive_observer_frame": [
+      -1,
+      5400
+    ]
+  },
+  "cpp_changed_lines": 18,
+  "dll_sha256": "e94e7333f52e38919187862ec0da63eff5b18ead69ea66a160d63b9306c57a5d",
+  "macrobot_source_sha256": "6d807cc0b4f4b73e4567789c3b41da73d11bbd94969a6f41472139c8162b150b",
+  "diagnosis": "There are two structural failures, and neither is the expansion or worker-defense thresholds that c11 and c12 tuned. (1) BananaBrain proxy-Zealot rush (match-48): at 3480 the scout sees the enemy main with only a Nexus, a Pylon and Probes, so no Gateway and no gas. The rush detector needs 2 or more Gateways or a Zealot, so rushSeen only fires at 4248 when Zealots are already in our mineral line. By then the bot has an Assimilator and a Core started, has 1 Zealot, and loses all its Probes (stalemate_zero_units at 7920). (2) Dark Templar timing: in match-49 (PylonPuller, c12) DTs show up at about 8920 with no warning. The Observatory was only planned at 9576 and the Observer came after 10224. The army fell from 12 to 1 and the match was a cutoff loss. Match-52 (v6, a win) only survived because a Citadel was scouted at 5680, which started Robo and Observer early (Observer at about 8040, before the DTs at 9416). Match-42 and match-50 (Steamhammer) also skip detection until about 10000.",
+  "hypothesis": "(a) Proxy-rush detection: if the scout is within 520 px of the enemy start, has seen the enemy depot at least 96 frames earlier, it is before frame 5000, and no enemy Gateway, Barracks, Spawning Pool or tech building has been seen, set rushSeen. The existing tested rush response then runs about 700 frames earlier: Gateways 2 and 3, the tech hold and the Probe cap. (b) Turn on the proactive Observer path at frame 5400 through build_config, guarded by a new proactiveObs() check. The guard skips the path while there is a home threat or while a rush is seen and the army has fewer than 6 units. The Robotics Facility waits for a completed Core. With that, the Observer is out by about 8000 in every game, before DT arrival at about 8900\u20139400, and does not depend on luckily scouting a Citadel.",
+  "expectation": "BananaBrain: rush_seen comes from source \"proxy\" at about 3600 instead of 4248. That should give 3 or more Zealots by about 5000, survival past 8000, and a score above 30. PylonPuller: an Observer exists before the DTs at about 8900, the army survives the DTs, and the bot wins as in match-52 (score above 75). Steamhammer: Robo is earlier and Dragoons are slightly delayed, but the Observer helps against its Observer and Reaver play. It should stay a win."
+}

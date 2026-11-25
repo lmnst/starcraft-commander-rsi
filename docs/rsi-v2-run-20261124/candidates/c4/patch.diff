@@ -1,0 +1,60 @@
+--- v2/MacroBot.cpp
++++ c4/MacroBot.cpp
+@@ -36,8 +36,11 @@
+   TilePosition buildTile = TilePositions::Invalid;
+   int planFrame = 0, frame = 0, cash = 0, gas = 0;
+   int rangeStart = -1;
+-  bool attacking = false, cloakSeen = false, cloakTechSeen = false;
++  bool attacking = false, cloakSeen = false, cloakTechSeen = false, rushSeen = false;
++  // Unscouted enemies still build an army: floor the remembered power with a time-based estimate.
++  double enemyEstimate() const { return std::max(rememberedEnemyPower(),std::max(0.0,(frame-4500)/240.0)); }
+   Unit homeThreat = nullptr;
++  double threatPower = 0, homePower = 0;
+   std::ofstream trace;
+   int cannonBlockedUntil = -1;
+   std::map<std::pair<int,int>, int> failedExpansions;
+@@ -208,6 +211,19 @@
+       if(e->getType()==Protoss_Photon_Cannon) score-=150;
+       if(score<best) {best=score;homeThreat=e;}
+     }
++    // Ground pressure at our bases versus the army standing there (drives rush response).
++    threatPower=0; homePower=0; int rushers=0;
++    for(auto e:enemies) {
++      UnitType t=e->getType();
++      if(t.isWorker() || t.isBuilding() || e->isFlying()) continue;
++      if(baseDistance(e->getPosition())<700) threatPower+=power(e);
++      if(frame<6500 && (t==Protoss_Zealot || t==Zerg_Zergling || t==Terran_Marine) && e->getPosition().getDistance(home)<1600) ++rushers;
++    }
++    for(auto u:army) if(baseDistance(u->getPosition())<700) homePower+=power(u);
++    if(rushers>=2 && !rushSeen) {
++      rushSeen=true;
++      trace<<"{\"event\":\"rush_seen\",\"frame\":"<<frame<<",\"units\":"<<rushers<<"}\n";
++    }
+   }
+   bool freeSite(TilePosition t,UnitType type) const {
+     if(!t.isValid() || !Broodwar->canBuildHere(t,type,nullptr,false)) return false;
+@@ -265,6 +281,9 @@
+     if(count(Protoss_Pylon,true)==0) return None;
+     if(gates<1) return Protoss_Gateway;
+     if(gates<2 && workers.size()>=cfg.gate2_workers) return Protoss_Gateway;
++    // Early zealot/ling/marine pressure seen: a third Gateway before tech, no greedy Nexus.
++    if(rushSeen && gates<2) return Protoss_Gateway;
++    if(rushSeen && gates<3 && frame<9000 && workers.size()>=12) return Protoss_Gateway;
+     bool detection=cloakSeen || cloakTechSeen;
+     if(detection && count(Protoss_Forge)==0) return Protoss_Forge;
+     if(detection && count(Protoss_Forge,true) && count(Protoss_Photon_Cannon)<int(nexuses.size())*cfg.cannons_per_base && frame>=cannonBlockedUntil) return Protoss_Photon_Cannon;
+@@ -505,7 +524,13 @@
+     int workerGoal=std::min(cfg.probes_cap,cfg.probes_first_base+cfg.probes_per_extra_base*std::max(0,int(nexuses.size())-1));
+     // Maintain economic growth; the first two Zealots still get an emergency priority.
+     if(homeThreat && army.size()<2) for(auto u:own) if(u->getType()==Protoss_Gateway && u->isCompleted() && u->isPowered() && u->isIdle()) train(u,Protoss_Zealot);
+-    for(auto n:nexuses) if(n->isIdle() && queued(Protoss_Probe)<workerGoal) train(n,Protoss_Probe);
++    // Under early pressure, fund warriors before Probes until the army can hold.
++    bool holdProbes=rushSeen && army.size()<5 && frame<9000 && workers.size()>=12 && (homeThreat || threatPower>homePower);
++    if(holdProbes) for(auto u:own) if(u->getType()==Protoss_Gateway && u->isCompleted() && u->isPowered() && u->isIdle()) {
++      bool goon=count(Protoss_Cybernetics_Core,true) && gas>=50 && cash>=125;
++      train(u,goon?Protoss_Dragoon:Protoss_Zealot);
++    }
++    if(!holdProbes) for(auto n:nexuses) if(n->isIdle() && queued(Protoss_Probe)<workerGoal) train(n,Protoss_Probe);
+     bool rangeNeeded=detectStep==None && count(Protoss_Dragoon)>=cfg.range_after_dragoons && !me->getUpgradeLevel(UpgradeTypes::Singularity_Charge) && !me->isUpgrading(UpgradeTypes::Singularity_Charge);
+     if(rangeNeeded) {
+       bool began=false;

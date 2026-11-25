@@ -1,0 +1,66 @@
+--- v8/MacroBot.cpp
++++ c23/MacroBot.cpp
+@@ -100,6 +100,9 @@
+   } cfg;
+   bool configOk=false;
+   bool early(int at) const {return at>=0 && frame>=at;}
++  // Proactive Forge+cannon vs unscouted DTs (match-92@7688 Steamhammer, match-89@9240 PylonPuller: Citadel never seen).
++  // Waits while a scouted rush is live so early minerals still buy Zealots.
++  bool proCannon() const {return early(cfg.proactive_cannon_frame) && !(rushSeen && army.size()<5 && frame<8000);}
+   bool loadConfig(std::string& error) {
+     std::ifstream in("bwapi-data/AI/build_config.json",std::ios::binary);
+     if(!in) {error="missing bwapi-data/AI/build_config.json";return false;}
+@@ -319,13 +322,13 @@
+     // A Robotics Facility already under way: its Observatory comes before the Forge detour.
+     bool roboFirst=count(Protoss_Robotics_Facility)>0 && count(Protoss_Observatory)==0;
+     if(detection && !roboFirst && count(Protoss_Forge)==0) return Protoss_Forge;
+-    if(detection && count(Protoss_Forge,true) && count(Protoss_Photon_Cannon)<int(nexuses.size())*cfg.cannons_per_base && frame>=cannonBlockedUntil && bareNexus()) return Protoss_Pylon;
++    if((detection || (core>0 && proCannon())) && count(Protoss_Forge,true) && count(Protoss_Photon_Cannon)<int(nexuses.size())*cfg.cannons_per_base && frame>=cannonBlockedUntil && bareNexus()) return Protoss_Pylon;
+     if(detection && count(Protoss_Forge,true) && count(Protoss_Photon_Cannon)<int(nexuses.size())*cfg.cannons_per_base && frame>=cannonBlockedUntil) return Protoss_Photon_Cannon;
+     if(count(Protoss_Assimilator)==0 && early(cfg.proactive_observer_frame)) return Protoss_Assimilator;
+     if(count(Protoss_Assimilator)==0 && !rushHold && (count(Protoss_Zealot)>=cfg.gas1_zealots || frame>cfg.gas1_frame || detection)) return Protoss_Assimilator;
+     if(count(Protoss_Assimilator)>0 && core==0 && !rushHold) return Protoss_Cybernetics_Core;
+-    if(core>0 && early(cfg.proactive_cannon_frame) && count(Protoss_Forge)==0) return Protoss_Forge;
+-    if(core>0 && early(cfg.proactive_cannon_frame) && count(Protoss_Forge,true) && count(Protoss_Photon_Cannon)<int(nexuses.size())*cfg.cannons_per_base && frame>=cannonBlockedUntil) return Protoss_Photon_Cannon;
++    if(core>0 && proCannon() && count(Protoss_Forge)==0) return Protoss_Forge;
++    if(core>0 && proCannon() && count(Protoss_Forge,true) && count(Protoss_Photon_Cannon)<int(nexuses.size())*cfg.cannons_per_base && frame>=cannonBlockedUntil) return Protoss_Photon_Cannon;
+     /*+*/if(core && early(cfg.proactive_observer_frame) && count(Protoss_Robotics_Facility)==0) return Protoss_Robotics_Facility;/*-*/
+     if(core && detection && count(Protoss_Robotics_Facility)==0) return Protoss_Robotics_Facility;
+     if(count(Protoss_Robotics_Facility,true) && count(Protoss_Observatory)==0) return Protoss_Observatory;
+@@ -372,7 +375,7 @@
+         }
+       } else {
+         if(type==Protoss_Pylon) for(auto u:own) if(u->getType().requiresPsi() && u->isCompleted() && !u->isPowered()) {anchor=u->getPosition();break;}
+-        if(type==Protoss_Pylon && (cloakSeen || cloakTechSeen) && count(Protoss_Forge,true)) {Unit b=bareNexus(); if(b) anchor=b->getPosition();}
++        if(type==Protoss_Pylon && (cloakSeen || cloakTechSeen || proCannon()) && count(Protoss_Forge,true)) {Unit b=bareNexus(); if(b) anchor=b->getPosition();}
+         if(type==Protoss_Photon_Cannon) {
+           anchor=home;
+           for(auto n:nexuses) {bool covered=false;for(auto u:own) if(u->getType()==Protoss_Photon_Cannon && u->getDistance(n)<300) covered=true;
+@@ -562,6 +565,8 @@
+     // Second Gateway: match-84 wanted it from 3240 but Zealots/Probes ate every mineral until 4632,
+     // so BananaBrain's 3-Zealot hit at 4680 met one Gateway. Hold its price like a tech step.
+     if(reserve==None && desired==Protoss_Gateway && count(Protoss_Gateway)<2) reserve=desired;
++    // Proactive anti-DT cannon: hold the Forge/Cannon price, otherwise Zealots delay it past the DT arrival.
++    if(reserve==None && proCannon() && !homeThreat && (desired==Protoss_Forge || desired==Protoss_Photon_Cannon)) reserve=desired;
+     cash=me->minerals()-(reserve!=None?reserve.mineralPrice():0);
+     gas=me->gas()-(reserve!=None?reserve.gasPrice():0);
+     if(detectStep!=None && detectStep!=Protoss_Observer) {
+--- v8/build_config.json
++++ c23/build_config.json
+@@ -25,7 +25,7 @@
+   "range_after_dragoons": 1,
+   "weapons_army": 10,
+   "robo_frame": 7800,
+-  "robo_army": 8,
++  "robo_army": 6,
+   "observers_base": 1,
+   "observers_alert": 2,
+   "reavers_max": 2,
+@@ -34,6 +34,6 @@
+   "citadel_zealots": 8,
+   "citadel_frame": 9500,
+   "proactive_observer_frame": -1,
+-  "proactive_cannon_frame": -1,
++  "proactive_cannon_frame": 5700,
+   "cannons_per_base": 1
+ }

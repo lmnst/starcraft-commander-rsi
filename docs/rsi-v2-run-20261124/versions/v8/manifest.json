@@ -1,0 +1,114 @@
+{
+  "candidate_id": "c21",
+  "parent": "v7",
+  "created_at": "2026-11-25T02:28:37.763425+00:00",
+  "changed_files": [
+    "MacroBot.cpp",
+    "build_config.json"
+  ],
+  "changed_functions": {},
+  "build_config_changes": {
+    "gate2_workers": [
+      12,
+      10
+    ]
+  },
+  "cpp_changed_lines": 7,
+  "dll_sha256": "27ea8e27d6db36467324d578fbb3b06638062166f63d00b8e72a80b233d44262",
+  "macrobot_source_sha256": "f9480c9b52fa608dc983f4d39f7105bf277ad0954730ac6553b25864ca44fe4f",
+  "diagnosis": "Against BananaBrain, v7 loses before it can play the mid game. In match-84 the 2nd Gateway was wanted from about frame 3240, when the bot reached 12 workers. Zealots and Probes spent every mineral, so the Gateway was not placed until 4632. BananaBrain's 3\u20134 Zealots reached the mineral line at 4680 and found 2 Zealots and one Gateway. Probes were wiped by 6100. Match-83 (c20) shows the same starvation: the 3rd Gateway came at 5736 and the Forge plus cannons ate the rest, so the army fell from 5 to 0. Against Steamhammer (match-82@12504 to 18000), the bot spent about 5500 frames planning the natural Nexus on bases the enemy had already taken. Each attempt failed with Unbuildable_Location, and the 400-mineral reserve sat idle. The 1200-frame blacklist let it cycle back through the same 4 failed sites.",
+  "hypothesis": "This change targets the economy and opening, not the cannon or detection thresholds that the last 4 rejected Challengers tweaked. (1) production() now holds back 150 minerals for the 2nd Gateway whenever nextBuilding() asks for it. (2) gate2_workers drops from 12 to 10. Together these should get two Gateways producing by about frame 3700, ahead of BananaBrain's Zealot hit at about 4600. (3) expansion() skips sites within 320 px of a remembered enemy building. (4) A failed Nexus plan blacklists its site for 3600 frames instead of 1200. The bot then stops parking 400 minerals on taken bases against Steamhammer and spends them on Gateway units and Robotics tech. Total change: 7 C++ lines plus 1 config key.",
+  "expectation": "BananaBrain: 2nd Gateway placed by about 2600 instead of 4632. The army has 3\u20134 units when the first Zealots arrive. Workers survive past 7000 and the score rises above the 32.9 mean, aiming for 45 or more. Steamhammer: no repeated Unbuildable_Location Nexus plans after the first failure on an enemy-held base, the army peak is higher, and the score is at least 58. PylonPuller: the Core is delayed by at most about 300 frames and the bot still wins with a score of about 80 or more. FPS unchanged.",
+  "version": "v8",
+  "promoted_from": "c21",
+  "promoted_at": "2026-11-25T03:01:54.961309+00:00",
+  "verdict": {
+    "decision": "promoted",
+    "reason": "score_improved",
+    "details": {
+      "compared_opponents": [
+        "PylonPuller",
+        "Steamhammer",
+        "BananaBrain"
+      ],
+      "champion_win_rate": 0.3333,
+      "challenger_win_rate": 0.3333,
+      "champion_loss_rate": 0.6667,
+      "challenger_loss_rate": 0.6667,
+      "champion_mean_score": 58.93,
+      "challenger_mean_score": 67.49,
+      "score_delta": 8.56,
+      "champion_fps": 23.69,
+      "challenger_fps": 23.77,
+      "per_opponent": {
+        "PylonPuller": {
+          "champion": {
+            "games": 3,
+            "wins": 3,
+            "losses": 0,
+            "inconclusive": 0,
+            "win_rate": 1.0,
+            "loss_rate": 0.0,
+            "mean_score": 85.63,
+            "mean_fps": 23.562
+          },
+          "challenger": {
+            "games": 1,
+            "wins": 1,
+            "losses": 0,
+            "inconclusive": 0,
+            "win_rate": 1.0,
+            "loss_rate": 0.0,
+            "mean_score": 90.72,
+            "mean_fps": 23.691
+          }
+        },
+        "Steamhammer": {
+          "champion": {
+            "games": 2,
+            "wins": 0,
+            "losses": 2,
+            "inconclusive": 0,
+            "win_rate": 0.0,
+            "loss_rate": 1.0,
+            "mean_score": 58.29,
+            "mean_fps": 23.815
+          },
+          "challenger": {
+            "games": 1,
+            "wins": 0,
+            "losses": 1,
+            "inconclusive": 0,
+            "win_rate": 0.0,
+            "loss_rate": 1.0,
+            "mean_score": 51.22,
+            "mean_fps": 23.813
+          }
+        },
+        "BananaBrain": {
+          "champion": {
+            "games": 3,
+            "wins": 0,
+            "losses": 3,
+            "inconclusive": 0,
+            "win_rate": 0.0,
+            "loss_rate": 1.0,
+            "mean_score": 32.88,
+            "mean_fps": 23.685
+          },
+          "challenger": {
+            "games": 1,
+            "wins": 0,
+            "losses": 1,
+            "inconclusive": 0,
+            "win_rate": 0.0,
+            "loss_rate": 1.0,
+            "mean_score": 60.54,
+            "mean_fps": 23.815
+          }
+        }
+      },
+      "max_single_opp_drop": 7.07
+    }
+  }
+}

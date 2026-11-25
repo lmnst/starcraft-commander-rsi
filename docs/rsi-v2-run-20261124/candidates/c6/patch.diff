@@ -1,0 +1,44 @@
+--- v3/MacroBot.cpp
++++ c6/MacroBot.cpp
+@@ -37,6 +37,9 @@
+   int planFrame = 0, frame = 0, cash = 0, gas = 0;
+   int rangeStart = -1;
+   bool attacking = false, cloakSeen = false, cloakTechSeen = false, rushSeen = false;
++  // Scouted opening signals (legal sightings only): mass-gateway with no tech building => zealot rush.
++  std::set<int> enemyGateIds;
++  bool enemyTechSeen = false, earlyZealotSeen = false;
+   // Unscouted enemies still build an army: floor the remembered power with a time-based estimate.
+   double enemyEstimate() const { return std::max(rememberedEnemyPower(),std::max(0.0,(frame-4500)/240.0)); }
+   Unit homeThreat = nullptr;
+@@ -199,6 +202,13 @@
+       if(!u->isDetected() && !u->isFlying() && t.canAttack())
+         undetectedSnapshots.push_back({u->getID(),t,u->getPosition()});
+       if(u->isCompleted() && typeValue(t)>0) enemyArmyMemory[u->getID()]={t,frame};
++      if(t==Protoss_Gateway || t==Terran_Barracks) enemyGateIds.insert(u->getID());
++      if(t==Protoss_Assimilator || t==Protoss_Cybernetics_Core || t==Protoss_Forge || t==Terran_Refinery || t==Zerg_Extractor) enemyTechSeen=true;
++      if(t==Protoss_Zealot && frame<3800) earlyZealotSeen=true;
++    }
++    if(!rushSeen && frame<5000 && !enemyTechSeen && (enemyGateIds.size()>=2 || earlyZealotSeen)) {
++      rushSeen=true;
++      trace<<"{\"event\":\"rush_seen\",\"frame\":"<<frame<<",\"units\":0,\"source\":\"scout\",\"gates\":"<<enemyGateIds.size()<<"}\n";
+     }
+     for(auto it=enemyBuildings.begin();it!=enemyBuildings.end();) {
+       bool seen=false; for(auto e:enemies) if(e->getID()==it->first) seen=true;
+@@ -473,6 +483,8 @@
+     std::map<int,int> assigned;
+     for(auto w:workers) if(w->getOrderTarget()) assigned[w->getOrderTarget()->getID()]++;
+     int gasTarget=me->gas()<cfg.gas_bank_full?cfg.gas_workers_full:(me->gas()<cfg.gas_bank_reduced?cfg.gas_workers_reduced:0);
++    // Against an early zealot/ling/marine rush, minerals buy the defending warriors; bank only a little gas.
++    if(rushSeen && frame<8000 && army.size()<6 && me->gas()>=100) gasTarget=0;
+     for(auto w:workers) {
+       if(w==builder || w==scout || defenders.count(w->getID()) || w->isConstructing()) continue;
+       if(!commandReady(w,24)) continue;
+@@ -526,6 +538,8 @@
+     if(homeThreat && army.size()<2) for(auto u:own) if(u->getType()==Protoss_Gateway && u->isCompleted() && u->isPowered() && u->isIdle()) train(u,Protoss_Zealot);
+     // Under early pressure, fund warriors before Probes until the army can hold.
+     bool holdProbes=rushSeen && army.size()<5 && frame<9000 && workers.size()>=12 && (homeThreat || threatPower>homePower);
++    // Scouted rush: cap Probes at 16 until a few Zealots are out, so the extra Gateways stay busy.
++    if(rushSeen && frame<7000 && army.size()<4 && workers.size()>=16) holdProbes=true;
+     if(holdProbes) for(auto u:own) if(u->getType()==Protoss_Gateway && u->isCompleted() && u->isPowered() && u->isIdle()) {
+       bool goon=count(Protoss_Cybernetics_Core,true) && gas>=50 && cash>=125;
+       train(u,goon?Protoss_Dragoon:Protoss_Zealot);

@@ -1,0 +1,52 @@
+--- v2/MacroBot.cpp
++++ c3/MacroBot.cpp
+@@ -58,6 +58,9 @@
+   // Remembered enemy combat units (legal sightings only): id -> (type, last seen frame).
+   std::map<int, std::pair<UnitType,int>> enemyArmyMemory;
+   double typeValue(UnitType t) const {
++    // Static defense is part of what an attack must break through.
++    if(t==Protoss_Photon_Cannon || t==Zerg_Sunken_Colony) return 4.0;
++    if(t==Terran_Bunker) return 5.0;
+     if(t.isWorker() || t.isBuilding() || t==Protoss_Interceptor || t==Protoss_Scarab || t==Zerg_Larva || t==Zerg_Egg) return 0;
+     if(!t.canAttack() && t!=Protoss_Reaver && t!=Protoss_Carrier) return 0;
+     if(t==Protoss_Zealot) return 2.0;
+@@ -69,7 +72,11 @@
+   }
+   double rememberedEnemyPower() const {
+     double sum=0;
+-    for(const auto &e:enemyArmyMemory) if(frame-e.second.second<3600) sum+=typeValue(e.second.first);
++    for(const auto &e:enemyArmyMemory) {
++      // Buildings do not walk away: count them while still remembered as standing.
++      if(e.second.first.isBuilding()) { if(enemyBuildings.count(e.first)) sum+=typeValue(e.second.first); }
++      else if(frame-e.second.second<3600) sum+=typeValue(e.second.first);
++    }
+     return sum;
+   }
+   //@config-begin
+@@ -588,7 +595,14 @@
+       attacking=false;
+       trace<<"{\"event\":\"attack_stop\",\"frame\":"<<frame<<",\"mine\":"<<mine<<",\"theirs\":"<<theirs<<"}\n";
+     }
+-    Position goal=homeThreat?homeThreat->getPosition():(attacking?objective():rally);
++    // With a second base, hold in front of the most exposed Nexus instead of the main.
++    Position hold=rally;
++    if(nexuses.size()>=2) {
++      Unit front=nullptr; double fd=1e18;
++      for(auto n:nexuses) {double d=n->getDistance(enemyStart); if(d<fd){fd=d;front=n;}}
++      if(front && front->getPosition().getDistance(home)>300) hold=toward(front->getPosition(),enemyStart,192);
++    }
++    Position goal=homeThreat?homeThreat->getPosition():(attacking?objective():hold);
+     Position center=home;
+     if(!army.empty()){long x=0,y=0;for(auto u:army){x+=u->getPosition().x;y+=u->getPosition().y;}center=Position(int(x/army.size()),int(y/army.size()));}
+     for(auto u:army) {
+--- v2/build_config.json
++++ c3/build_config.json
+@@ -33,7 +33,7 @@
+   "support_bay_frame": 11500,
+   "citadel_zealots": 8,
+   "citadel_frame": 9500,
+-  "proactive_observer_frame": -1,
++  "proactive_observer_frame": 6000,
+   "proactive_cannon_frame": -1,
+   "cannons_per_base": 1
+ }

@@ -1,0 +1,90 @@
+--- v6/MacroBot.cpp
++++ c16/MacroBot.cpp
+@@ -63,6 +63,20 @@
+   int enemySnapshotFrame = -1;
+   // Remembered enemy combat units (legal sightings only): id -> (type, last seen frame).
+   std::map<int, std::pair<UnitType,int>> enemyArmyMemory;
++  // Cloaked/burrowed ground attackers (legal sightings only): id -> (last position, frame). Observers hunt these.
++  std::map<int, std::pair<Position,int>> cloakMemory;
++  // First Nexus lacking both a Photon Cannon and a Pylon nearby (cannon there needs power first).
++  Unit bareNexus() const {
++    for(auto n:nexuses) {
++      bool cannon=false,pylon=false;
++      for(auto u:own) {
++        if(u->getType()==Protoss_Photon_Cannon && u->getDistance(n)<300) cannon=true;
++        if(u->getType()==Protoss_Pylon && u->getDistance(n)<224) pylon=true;
++      }
++      if(!cannon) return pylon?nullptr:n;
++    }
++    return nullptr;
++  }
+   double typeValue(UnitType t) const {
+     if(t.isWorker() || t.isBuilding() || t==Protoss_Interceptor || t==Protoss_Scarab || t==Zerg_Larva || t==Zerg_Egg) return 0;
+     if(!t.canAttack() && t!=Protoss_Reaver && t!=Protoss_Carrier) return 0;
+@@ -201,6 +215,8 @@
+       }
+       if(!u->isDetected() && !u->isFlying() && t.canAttack())
+         undetectedSnapshots.push_back({u->getID(),t,u->getPosition()});
++      if((u->isCloaked() || u->isBurrowed() || t==Protoss_Dark_Templar) && !u->isFlying() && t.canAttack())
++        cloakMemory[u->getID()]={u->getPosition(),frame};
+       if(u->isCompleted() && typeValue(t)>0) enemyArmyMemory[u->getID()]={t,frame};
+       if(t==Protoss_Gateway || t==Terran_Barracks) enemyGateIds.insert(u->getID());
+       if(t==Protoss_Assimilator || t==Protoss_Cybernetics_Core || t==Protoss_Forge || t==Terran_Refinery || t==Zerg_Extractor) enemyTechSeen=true;
+@@ -301,6 +317,7 @@
+     // A Robotics Facility already under way: its Observatory comes before the Forge detour.
+     bool roboFirst=count(Protoss_Robotics_Facility)>0 && count(Protoss_Observatory)==0;
+     if(detection && !roboFirst && count(Protoss_Forge)==0) return Protoss_Forge;
++    if(detection && count(Protoss_Forge,true) && count(Protoss_Photon_Cannon)<int(nexuses.size())*cfg.cannons_per_base && frame>=cannonBlockedUntil && bareNexus()) return Protoss_Pylon;
+     if(detection && count(Protoss_Forge,true) && count(Protoss_Photon_Cannon)<int(nexuses.size())*cfg.cannons_per_base && frame>=cannonBlockedUntil) return Protoss_Photon_Cannon;
+     if(count(Protoss_Assimilator)==0 && early(cfg.proactive_observer_frame)) return Protoss_Assimilator;
+     if(count(Protoss_Assimilator)==0 && !rushHold && (count(Protoss_Zealot)>=cfg.gas1_zealots || frame>cfg.gas1_frame || detection)) return Protoss_Assimilator;
+@@ -353,6 +370,7 @@
+         }
+       } else {
+         if(type==Protoss_Pylon) for(auto u:own) if(u->getType().requiresPsi() && u->isCompleted() && !u->isPowered()) {anchor=u->getPosition();break;}
++        if(type==Protoss_Pylon && (cloakSeen || cloakTechSeen) && count(Protoss_Forge,true)) {Unit b=bareNexus(); if(b) anchor=b->getPosition();}
+         if(type==Protoss_Photon_Cannon) {
+           anchor=home;
+           for(auto n:nexuses) {bool covered=false;for(auto u:own) if(u->getType()==Protoss_Photon_Cannon && u->getDistance(n)<300) covered=true;
+@@ -361,7 +379,7 @@
+         tile=findSite(type,anchor);
+       }
+       if(!tile.isValid()) {
+-        if(type==Protoss_Photon_Cannon) {
++        if(type==Protoss_Photon_Cannon || type==Protoss_Pylon) {
+           cannonBlockedUntil=frame+cannonRetryDelay;
+           trace<<"{\"event\":\"cannon_skip\",\"frame\":"<<frame<<",\"reason\":\"no_site\",\"until\":"<<cannonBlockedUntil<<"}\n";
+         }
+@@ -686,10 +704,22 @@
+       else advance(u,goal);
+     }
+     int index=0;
++    // Observers hunt live cloaked attackers near our army or bases (match-61@12240: DT at the natural,
++    // both Observers parked in the main; match-64@12720: Observers drifted off the DTs and the army fled).
++    std::vector<Position> hunts;
++    for(const auto &c:cloakMemory) if(frame-c.second.second<=120) {
++      Position p=c.second.first;
++      if(baseDistance(p)<900 || p.getDistance(center)<700) hunts.push_back(p);
++    }
+     for(auto u:own) if(u->getType()==Protoss_Observer && u->isCompleted()) {
+-      Position destination=(index++==0 || !homeThreat)?toward(center,goal,64):homeThreat->getPosition();
++      int slot=index++;
++      Position destination=(slot==0 || !homeThreat)?toward(center,goal,64):homeThreat->getPosition();
++      if(!hunts.empty() && slot<2) {
++        double bd=1e18;
++        for(auto p:hunts) {double d=slot==0?p.getDistance(center):baseDistance(p); if(d<bd){bd=d;destination=p;}}
++      }
+       Unit danger=nullptr;
+-      for(auto e:enemies) if(e->getType().airWeapon()!=WeaponTypes::None && e->getDistance(u)<200 && e->isDetected()) {danger=e;break;}
++      for(auto e:enemies) if(e->getType().airWeapon()!=WeaponTypes::None && e->getDistance(u)<(hunts.empty()?200:120) && e->isDetected()) {danger=e;break;}
+       if(danger) destination=toward(u->getPosition(),danger->getPosition(),-96);
+       move(u,destination);
+     }
+@@ -744,6 +774,7 @@
+     ownPositions.erase(u->getID());
+     enemyBuildings.erase(u->getID());
+     enemyArmyMemory.erase(u->getID());
++    cloakMemory.erase(u->getID());
+     if(u->getType().isMineralField()) BWEM::Map::Instance().OnMineralDestroyed(u);
+     else if(u->getPlayer()==Broodwar->neutral() && u->getType().isBuilding()) BWEM::Map::Instance().OnStaticBuildingDestroyed(u);
+   }

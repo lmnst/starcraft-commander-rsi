@@ -1,0 +1,16 @@
+{
+  "candidate_id": "c16",
+  "parent": "v6",
+  "created_at": "2026-11-24T23:25:41.265054+00:00",
+  "changed_files": [
+    "MacroBot.cpp"
+  ],
+  "changed_functions": {},
+  "build_config_changes": null,
+  "cpp_changed_lines": 37,
+  "dll_sha256": "e397e43c17a914ba3b3b6c685bf121d8a0d22f5e3d6595a81e778ddffc72e834",
+  "macrobot_source_sha256": "cf450f2f92a1ab325f688c8c4e96542ce1e915bcefb5e6f7d3752a92197a6396",
+  "diagnosis": "With v6, PylonPuller games (match-64, plus c15's match-61) are lost to Dark Templar after detection is already in place. In match-61, 2 Observers were out by 11381 and the army had 13 units at 12000. Even so, from 12000 to 12480 the DTs sat undetected at the natural (around 2020,770) while both Observers stayed parked in the main (around 1430,300). The DTs then killed 7 Dragoons, 5 Zealots and many Probes. In match-64 at 12720, the Observers had drifted to 1600,3800 while the DTs were around 1150,3600 undetected. The army kept retreating, because the undetected-threat branch has no detector nearby to move to, and it shrank from 14 to 0. The cloak cannon also failed: in match-61 at 11952, 12696 and 13416 the log shows cannon_skip no_site, because there was no Pylon at the natural Nexus. Earlier rejected attempts (c8, c9, c13, c15) all changed when detection gets built. None changed how detection is used. That is the real failure point.",
+  "hypothesis": "Use the detection we already have. (1) Remember cloaked or burrowed ground attackers legally seen (DTs included) in cloakMemory, keyed by unit id with position and frame. Observer slot 0 goes to the freshly seen cloaked attacker (within 120 frames) closest to the army center. Slot 1 goes to the one closest to our bases. Only threats within 900 px of a base or 700 px of the army count. The anti-air avoid radius drops to 120 px while hunting. The existing moveToDetection logic then sends units to the Observer, which is now on top of the DT, so they fight it instead of fleeing. (2) After a cloak sighting, once the Forge is done, any Nexus with no cannon and no Pylon gets a Pylon anchored at that Nexus first. The cannon there can then be placed instead of failing with no_site. Nothing changes until cloak is seen, so the zealot-rush lines against BananaBrain and Steamhammer behave exactly as v6.",
+  "expectation": "PylonPuller DT games: the DTs at the natural or in the main get spotted and killed by the 10 to 13 Dragoons and Zealots that are already there. The army survives past 13000 instead of collapsing to 0, and the score should rise above 60 with a real chance of a win. Steamhammer and BananaBrain games with no DTs play the same as v6. Their DT follow-ups also benefit once an Observer exists. FPS should not change, because the added work is a small map lookup every 8 frames."
+}

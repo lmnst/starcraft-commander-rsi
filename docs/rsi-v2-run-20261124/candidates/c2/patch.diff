@@ -1,0 +1,43 @@
+--- v2/MacroBot.cpp
++++ c2/MacroBot.cpp
+@@ -240,20 +240,23 @@
+     return chosen;
+   }
+   TilePosition expansion() const {
+-    TilePosition best=TilePositions::Invalid; int distance=10000000;
++    // Always take the closest free base. If enemy combat units stand on it, wait
++    // instead of sending a lone Probe (and 400 reserved minerals) across the map.
++    TilePosition best=TilePositions::Invalid; int distance=10000000; bool bestContested=false;
+     for(auto t:bases) {
+       Position p=Position(t)+Position(64,48);
+       if(p.getDistance(home)<200 || p.getDistance(enemyStart)<700) continue;
+-      bool occupied=false;
++      bool occupied=false, contested=false;
+       for(auto n:own) if(n->getType()==Protoss_Nexus && n->getDistance(p)<240) occupied=true;
+-      for(auto e:enemies) if(e->getDistance(p)<400 && e->getType().canAttack()) occupied=true;
++      for(const auto &b:enemyBuildings) if(b.second.getDistance(p)<320) occupied=true;
++      for(auto e:enemies) if(e->getDistance(p)<400 && e->getType().canAttack()) contested=true;
+       auto failIt = failedExpansions.find({t.x, t.y});
+-      if(failIt != failedExpansions.end() && frame < failIt->second) continue;
++      bool failed = failIt != failedExpansions.end() && frame < failIt->second;
+       if(occupied) continue;
+       int length=0; BWEM::Map::Instance().GetPath(home,p,&length);
+-      if(length>=0 && length<distance) {distance=length;best=t;}
+-    }
+-    return best;
++      if(length>=0 && length<distance) {distance=length;best=t;bestContested=contested || failed;}
++    }
++    return bestContested?TilePositions::Invalid:best;
+   }
+   UnitType nextBuilding() const {
+     int pylons=count(Protoss_Pylon), gates=count(Protoss_Gateway), core=count(Protoss_Cybernetics_Core);
+--- v2/build_config.json
++++ c2/build_config.json
+@@ -1,6 +1,6 @@
+ {
+   "gate2_workers": 12,
+-  "gates_base": 2,
++  "gates_base": 3,
+   "gates_bonus_workers": 18,
+   "gates_per_extra_base": 2,
+   "gates_cap": 8,
